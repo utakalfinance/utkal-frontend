@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Bell, 
   RefreshCw, 
@@ -24,8 +24,15 @@ export function NoticesManagement() {
     publishNoticeRecord,
     archiveNoticeRecord,
     deleteNoticeRecord,
-    refreshData 
+    refreshData,
+    markAllNoticesAsSeen,
   } = useAdmin();
+
+  useEffect(() => {
+    if (typeof markAllNoticesAsSeen === 'function') {
+      markAllNoticesAsSeen();
+    }
+  }, [markAllNoticesAsSeen]);
 
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState('');

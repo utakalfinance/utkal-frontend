@@ -19,12 +19,12 @@ export function GalleryLightbox({ isOpen, onClose, currentIndex, onPrev, onNext,
   const currentPhoto = photos[currentIndex] || photos[0];
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 lg:p-8 animate-fade-in font-sans"
       onClick={onClose}
     >
       {/* Lightbox Main Container Box */}
-      <div 
+      <div
         className="relative bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col justify-between"
         onClick={(e) => e.stopPropagation()}
       >
@@ -58,31 +58,34 @@ export function GalleryLightbox({ isOpen, onClose, currentIndex, onPrev, onNext,
             className="max-w-full max-h-[65vh] sm:max-h-[72vh] object-contain rounded-xl shadow-2xl"
           />
 
-          {/* Previous Button Control */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onPrev();
-            }}
-            className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white border border-slate-700 flex items-center justify-center transition-all hover:scale-105 shadow-xl cursor-pointer"
-            aria-label="Previous Image"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
+          {/* Navigation Controls (Only if multiple photos) */}
+          {photos.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (typeof onPrev === 'function') onPrev();
+                }}
+                className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white border border-slate-700 flex items-center justify-center transition-all hover:scale-105 shadow-xl cursor-pointer"
+                aria-label="Previous Image"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
 
-          {/* Next Button Control */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onNext();
-            }}
-            className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white border border-slate-700 flex items-center justify-center transition-all hover:scale-105 shadow-xl cursor-pointer"
-            aria-label="Next Image"
-          >
-            <ChevronRight className="w-6 h-6" />
-          </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (typeof onNext === 'function') onNext();
+                }}
+                className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white border border-slate-700 flex items-center justify-center transition-all hover:scale-105 shadow-xl cursor-pointer"
+                aria-label="Next Image"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </>
+          )}
         </div>
 
         {/* Bottom Caption Bar */}

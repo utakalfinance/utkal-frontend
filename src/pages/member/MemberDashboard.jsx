@@ -27,19 +27,33 @@ import { useMemberAuth } from '../../hooks/useMemberAuth';
  */
 export function MemberDashboard() {
   const { openMakeDeposit, openChangePassword } = useOutletContext() || {};
-  const { memberUser, application } = useMemberAuth();
+  const { memberUser, memberDetails, application, payments = [] } = useMemberAuth();
 
-  const memberId = memberUser?.memberId || application?.memberId || '—';
-  const name = memberUser?.name || application?.applicantName || 'Valued Member';
-  const email = memberUser?.email || application?.contactDetails?.email || '—';
-  const mobile = memberUser?.mobile || application?.contactDetails?.mobile || '—';
-  const status = memberUser?.status === 'active' ? 'Active' : (memberUser?.status || 'Active');
+  const memberId = memberUser?.memberId || memberDetails?.memberId || application?.memberId || '—';
+  const name = memberUser?.name || memberDetails?.name || application?.applicantName || 'Valued Member';
+  const email = memberDetails?.email || memberUser?.email || application?.contactDetails?.email || '—';
+  const mobile = memberDetails?.mobile || memberUser?.mobile || application?.contactDetails?.mobile || '—';
+  const status = memberUser?.status === 'active' || memberDetails?.status === 'active' ? 'Active' : 'Active';
   const membershipType =
+    memberDetails?.membershipType ||
     application?.membershipDetails?.membershipType ||
     application?.membershipType ||
     'Associate Member';
 
   const mustChangePassword = memberUser?.mustChangePassword === true;
+
+  // Calculate live financial summary from real member data
+  const verifiedPaymentsSum = payments
+    .filter((p) => p.status === 'Paid')
+    .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+
+  const pendingPaymentsSum = payments
+    .filter((p) => p.status === 'Pending')
+    .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+
+  const totalTransactionsCount = payments.length;
+
+  const formatCurrency = (val) => `₹${Number(val || 0).toLocaleString('en-IN')}`;
 
   return (
     <div className="space-y-6">
@@ -161,7 +175,7 @@ export function MemberDashboard() {
               {membershipType}
             </span>
             <span className="text-[10px] text-slate-400 mt-0.5 block">
-              Equity Share Class
+              Equity Share Class (10 Shares)
             </span>
           </div>
 
@@ -215,7 +229,7 @@ export function MemberDashboard() {
 
           <MemberStatCard
             title="Pending Payments"
-            value="₹0"
+            value={formatCurrency(pendingPaymentsSum)}
             icon={CreditCard}
             iconColor="text-amber-700 bg-amber-50 border-amber-200/60"
             subtitle="Under administrative review"
@@ -223,7 +237,7 @@ export function MemberDashboard() {
 
           <MemberStatCard
             title="Verified Payments"
-            value="₹0"
+            value={formatCurrency(verifiedPaymentsSum)}
             icon={CheckCircle2}
             iconColor="text-emerald-700 bg-emerald-50 border-emerald-200/60"
             subtitle="Officially credited"
@@ -231,7 +245,7 @@ export function MemberDashboard() {
 
           <MemberStatCard
             title="Transactions"
-            value="0"
+            value={String(totalTransactionsCount)}
             icon={ArrowLeftRight}
             iconColor="text-indigo-700 bg-indigo-50 border-indigo-200/60"
             subtitle="Total ledger movements"
@@ -256,12 +270,34 @@ export function MemberDashboard() {
             </Link>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs">
-            <EmptyState
-              icon={ArrowLeftRight}
-              title="No transactions available yet."
-              description="When deposits, contribution fees, or interest payouts take place, your complete transaction record will appear here."
-            />
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs">
+            {payments.length > 0 ? (
+              <div className="divide-y divide-slate-100">
+                {payments.slice(0, 5).map((p, idx) => (
+                  <div key={idx} className="py-3 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
+                        <CheckCircle2 className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-900 block">{p.purpose || 'Statutory Share Capital'}</span>
+                        <span className="text-[10px] font-mono text-slate-400 block">{p.paymentId || p.transactionId} • {p.date}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs font-black font-mono text-emerald-700 block">+{formatCurrency(p.amount)}</span>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase">{p.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                icon={ArrowLeftRight}
+                title="No transactions available yet."
+                description="When deposits, contribution fees, or interest payouts take place, your complete transaction record will appear here."
+              />
+            )}
           </div>
         </div>
 
@@ -280,12 +316,18 @@ export function MemberDashboard() {
             </Link>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs h-[calc(100%-2rem)] flex items-center justify-center">
-            <EmptyState
-              icon={Bell}
-              title="No new notifications."
-              description="You will receive alerts here for approvals, receipts, and AGM circulars."
-            />
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-100 text-xs text-blue-900 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <ShieldCheck className="w-4 h-4 text-blue-700" />
+                  <span>Membership Approved</span>
+                </div>
+                <p className="text-[11px] text-blue-800 leading-relaxed">
+                  Your application ({application?.applicationId || memberId}) has been successfully approved. Welcome to New Utkal Finance!
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

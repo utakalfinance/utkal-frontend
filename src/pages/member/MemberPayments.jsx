@@ -9,12 +9,25 @@ import {
 import { MemberPageHeader } from '../../components/member/MemberPageHeader';
 import { MemberStatCard } from '../../components/member/MemberStatCard';
 import { TransactionTable } from '../../components/member/TransactionTable';
+import { useMemberAuth } from '../../hooks/useMemberAuth';
 
 /**
  * MemberPayments Page (/member-dashboard/payments)
  * Record of payments made towards membership fees, shares, and service charges.
  */
 export function MemberPayments() {
+  const { payments = [] } = useMemberAuth();
+
+  const formatCurrency = (val) => `₹${Number(val || 0).toLocaleString('en-IN')}`;
+
+  const totalPaymentsSum = payments.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+  const verifiedPaymentsSum = payments
+    .filter((p) => p.status === 'Paid')
+    .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+  const pendingPaymentsSum = payments
+    .filter((p) => p.status === 'Pending')
+    .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+
   // Required columns: Payment ID, Date, Amount, Payment method, Status
   const paymentColumns = [
     { key: 'paymentId', label: 'Payment ID', className: 'w-36 font-mono text-[11px]' },
@@ -23,6 +36,12 @@ export function MemberPayments() {
     { key: 'method', label: 'Payment Method', className: 'min-w-[140px]' },
     { key: 'status', label: 'Status', className: 'w-32 text-center' },
   ];
+
+  const tableData = payments.map((p) => ({
+    ...p,
+    amount: formatCurrency(p.amount),
+    method: p.paymentMethod || p.method || 'UPI',
+  }));
 
   return (
     <div className="space-y-6">
@@ -37,7 +56,7 @@ export function MemberPayments() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <MemberStatCard
           title="Total Payments"
-          value="₹0"
+          value={formatCurrency(totalPaymentsSum)}
           icon={CreditCard}
           iconColor="text-blue-700 bg-blue-50 border-blue-200/60"
           subtitle="All transactions submitted"
@@ -45,7 +64,7 @@ export function MemberPayments() {
 
         <MemberStatCard
           title="Verified Payments"
-          value="₹0"
+          value={formatCurrency(verifiedPaymentsSum)}
           icon={CheckCircle2}
           iconColor="text-emerald-700 bg-emerald-50 border-emerald-200/60"
           subtitle="Receipts issued & cleared"
@@ -53,7 +72,7 @@ export function MemberPayments() {
 
         <MemberStatCard
           title="Pending Payments"
-          value="₹0"
+          value={formatCurrency(pendingPaymentsSum)}
           icon={Clock}
           iconColor="text-amber-700 bg-amber-50 border-amber-200/60"
           subtitle="Verification in progress"
@@ -67,14 +86,14 @@ export function MemberPayments() {
             Payment Records
           </h2>
           <span className="text-[11px] text-slate-400 font-mono">
-            0 Records Found
+            {payments.length} {payments.length === 1 ? 'Record' : 'Records'} Found
           </span>
         </div>
 
-        {/* Empty State Table */}
+        {/* Live Payment Records Table */}
         <TransactionTable
           columns={paymentColumns}
-          data={[]}
+          data={tableData}
           emptyIcon={Receipt}
           emptyMessage="No payment records available."
           emptyDescription="When payments are processed via UPI, Bank Remittance, or Branch Counter, receipts will appear here."

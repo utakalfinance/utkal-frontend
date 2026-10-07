@@ -19,6 +19,13 @@ import {
   updateMemberStatusApi,
 } from '../services/memberService';
 import {
+  getPaymentsApi,
+  createPaymentApi,
+  updatePaymentApi,
+  verifyPaymentApi,
+  refundPaymentApi,
+} from '../services/paymentService';
+import {
   isAdminAuthenticated,
   adminLogin as authAdminLogin,
   adminLogout as authAdminLogout,
@@ -301,20 +308,150 @@ export const AdminProvider = ({ children }) => {
   const [deposits, setDeposits] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [notices, setNotices] = useState([]);
-  const [galleryItems, setGalleryItems] = useState(INITIAL_GALLERY);
+  const [galleryItems, setGalleryItems] = useState(() => {
+    try {
+      const saved = localStorage.getItem('admin_gallery_items');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Failed to load gallery items from storage:', e);
+    }
+    return INITIAL_GALLERY;
+  });
+
+  // Sync galleryItems to localStorage on change
+  useEffect(() => {
+    try {
+      localStorage.setItem('admin_gallery_items', JSON.stringify(galleryItems));
+    } catch (e) {
+      console.warn('Failed to save gallery items to storage:', e);
+    }
+  }, [galleryItems]);
   const [teamMembers, setTeamMembers] = useState(INITIAL_TEAM);
+  const [seenApplicationIds, setSeenApplicationIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('admin_seen_application_ids');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const markAllApplicationsAsSeen = useCallback(() => {
+    const allPendingIds = [];
+    applications.forEach((a) => {
+      const s = (a.status || '').toLowerCase();
+      if (s === 'pending' || s === 'submitted' || s === 'correction required' || s === 'correction_required') {
+        if (a._id) allPendingIds.push(String(a._id));
+        if (a.id) allPendingIds.push(String(a.id));
+        if (a.applicationId) allPendingIds.push(String(a.applicationId));
+      }
+    });
+
+    setSeenApplicationIds((prev) => {
+      const prevStrings = prev.map(String);
+      const combined = Array.from(new Set([...prevStrings, ...allPendingIds]));
+      try {
+        localStorage.setItem('admin_seen_application_ids', JSON.stringify(combined));
+      } catch (e) { }
+      return combined;
+    });
+  }, [applications]);
+
+  const markApplicationAsSeen = useCallback((appId) => {
+    if (!appId) return;
+    const strId = String(appId);
+    setSeenApplicationIds((prev) => {
+      if (prev.map(String).includes(strId)) return prev;
+      const updated = [...prev, strId];
+      try {
+        localStorage.setItem('admin_seen_application_ids', JSON.stringify(updated));
+      } catch (e) { }
+      return updated;
+    });
+  }, []);
+
+  const unreadPendingAppsCount = applications.filter((a) => {
+    const s = (a.status || '').toLowerCase();
+    const isPending = s === 'pending' || s === 'submitted' || s === 'correction required' || s === 'correction_required';
+    if (!isPending) return false;
+
+    const ids = [a._id, a.id, a.applicationId].filter(Boolean).map(String);
+    if (ids.length === 0) return false;
+    const hasBeenSeen = ids.some((id) => seenApplicationIds.map(String).includes(id));
+    return !hasBeenSeen;
+  }).length;
+
+  const [seenNoticeIds, setSeenNoticeIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('admin_seen_notice_ids');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const markAllNoticesAsSeen = useCallback(() => {
+    const allNoticeIds = [];
+    notices.forEach((n) => {
+      const s = (n.status || '').toLowerCase();
+      if (s === 'published' || s === 'active') {
+        if (n._id) allNoticeIds.push(String(n._id));
+        if (n.id) allNoticeIds.push(String(n.id));
+      }
+    });
+
+    setSeenNoticeIds((prev) => {
+      const prevStrings = prev.map(String);
+      const combined = Array.from(new Set([...prevStrings, ...allNoticeIds]));
+      try {
+        localStorage.setItem('admin_seen_notice_ids', JSON.stringify(combined));
+      } catch (e) { }
+      return combined;
+    });
+  }, [notices]);
+
+  const markNoticeAsSeen = useCallback((noticeId) => {
+    if (!noticeId) return;
+    const strId = String(noticeId);
+    setSeenNoticeIds((prev) => {
+      if (prev.map(String).includes(strId)) return prev;
+      const updated = [...prev, strId];
+      try {
+        localStorage.setItem('admin_seen_notice_ids', JSON.stringify(updated));
+      } catch (e) { }
+      return updated;
+    });
+  }, []);
+
+  const unreadNoticesCount = notices.filter((n) => {
+    const s = (n.status || '').toLowerCase();
+    const isActive = s === 'published' || s === 'active';
+    if (!isActive) return false;
+
+    const ids = [n._id, n.id].filter(Boolean).map(String);
+    if (ids.length === 0) return false;
+    const hasBeenSeen = ids.some((id) => seenNoticeIds.map(String).includes(id));
+    return !hasBeenSeen;
+  }).length;
 
   const refreshData = useCallback(async () => {
+    let currentApps = [];
     try {
       const apiApps = await getApplicationsApi();
       if (Array.isArray(apiApps)) {
-        setApplications(apiApps.map(normalizeApplication));
+        currentApps = apiApps.map(normalizeApplication);
+        setApplications(currentApps);
       } else {
-        setApplications(getApplications().map(normalizeApplication));
+        currentApps = getApplications().map(normalizeApplication);
+        setApplications(currentApps);
       }
     } catch (err) {
       console.warn('API fetch failed, falling back to local storage:', err.message);
-      setApplications(getApplications().map(normalizeApplication));
+      currentApps = getApplications().map(normalizeApplication);
+      setApplications(currentApps);
     }
 
     try {
@@ -341,7 +478,18 @@ export const AdminProvider = ({ children }) => {
       setMembers(getMembers());
     }
 
-    setPayments(getPayments());
+    try {
+      const apiPayments = await getPaymentsApi();
+      if (Array.isArray(apiPayments)) {
+        setPayments(apiPayments);
+      } else {
+        setPayments(getPayments(currentApps));
+      }
+    } catch (err) {
+      console.warn('API payments fetch failed, falling back to local storage:', err.message);
+      setPayments(getPayments(currentApps));
+    }
+
     setDeposits(getDeposits());
     setTransactions(getTransactions());
     setNotices(getNotices());
@@ -389,22 +537,27 @@ export const AdminProvider = ({ children }) => {
     const apiResult = await updateApplicationStatusApi(mongoId, targetStatus);
 
     // Update local state without full page reload
-    setApplications((prev) =>
-      prev.map((app) => {
-        if (app._id === mongoId || app.id === idOrMongoId || app.applicationId === idOrMongoId) {
-          const updatedDoc = apiResult.application || {};
-          return normalizeApplication({
-            ...app,
-            ...updatedDoc,
-            status: updatedDoc.status || targetStatus,
-          });
-        }
-        return app;
-      })
-    );
+    const updatedDoc = apiResult.application || {};
+    const updatedApps = applications.map((app) => {
+      if (app._id === mongoId || app.id === idOrMongoId || app.applicationId === idOrMongoId) {
+        return normalizeApplication({
+          ...app,
+          ...updatedDoc,
+          status: updatedDoc.status || targetStatus,
+        });
+      }
+      return app;
+    });
 
+    setApplications(updatedApps);
     storageUpdateApplicationStatus(target?.id || idOrMongoId, newStatus);
+
+    // Sync payments so the newly approved application immediately appears in the Admin Payments Page
+    const freshPayments = getPayments(updatedApps);
+    setPayments(freshPayments);
+
     await refreshData();
+    window.dispatchEvent(new Event('storage'));
     return apiResult;
   };
 
@@ -480,27 +633,51 @@ export const AdminProvider = ({ children }) => {
     refreshData();
   };
 
-  const createNewPayment = (paymentData) => {
-    const created = storageAddPayment(paymentData);
-    refreshData();
+  const createNewPayment = async (paymentData) => {
+    let created = null;
+    try {
+      created = await createPaymentApi(paymentData);
+    } catch (err) {
+      console.warn('API create payment failed, applying storage fallback:', err.message);
+      created = storageAddPayment(paymentData);
+    }
+    await refreshData();
     return created;
   };
 
-  const updatePaymentRecord = (id, updatedFields) => {
-    const updated = storageUpdatePayment(id, updatedFields);
-    refreshData();
+  const updatePaymentRecord = async (id, updatedFields) => {
+    let updated = null;
+    try {
+      updated = await updatePaymentApi(id, updatedFields);
+    } catch (err) {
+      console.warn('API update payment failed, applying storage fallback:', err.message);
+      updated = storageUpdatePayment(id, updatedFields);
+    }
+    await refreshData();
     return updated;
   };
 
-  const verifyPaymentRecord = (id) => {
-    const updated = storageVerifyPayment(id);
-    refreshData();
+  const verifyPaymentRecord = async (id) => {
+    let updated = null;
+    try {
+      updated = await verifyPaymentApi(id);
+    } catch (err) {
+      console.warn('API verify payment failed, applying storage fallback:', err.message);
+      updated = storageVerifyPayment(id);
+    }
+    await refreshData();
     return updated;
   };
 
-  const refundPaymentRecord = (id) => {
-    const updated = storageRefundPayment(id);
-    refreshData();
+  const refundPaymentRecord = async (id) => {
+    let updated = null;
+    try {
+      updated = await refundPaymentApi(id);
+    } catch (err) {
+      console.warn('API refund payment failed, applying storage fallback:', err.message);
+      updated = storageRefundPayment(id);
+    }
+    await refreshData();
     return updated;
   };
 
@@ -638,6 +815,14 @@ export const AdminProvider = ({ children }) => {
         addTeamMember,
         updateTeamMember,
         deleteTeamMember,
+        seenApplicationIds,
+        unreadPendingAppsCount,
+        markAllApplicationsAsSeen,
+        markApplicationAsSeen,
+        seenNoticeIds,
+        unreadNoticesCount,
+        markAllNoticesAsSeen,
+        markNoticeAsSeen,
       }}
     >
       {children}

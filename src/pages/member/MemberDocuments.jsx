@@ -5,9 +5,12 @@ import {
   UploadCloud,
   ShieldCheck,
   Info,
+  CheckCircle2,
+  ExternalLink,
 } from 'lucide-react';
 import { MemberPageHeader } from '../../components/member/MemberPageHeader';
 import { StatusBadge } from '../../components/member/StatusBadge';
+import { useMemberAuth } from '../../hooks/useMemberAuth';
 
 /**
  * MemberDocuments Page (/member-dashboard/documents)
@@ -15,38 +18,54 @@ import { StatusBadge } from '../../components/member/StatusBadge';
  */
 export function MemberDocuments() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const { application, memberDetails, memberUser } = useMemberAuth();
 
-  // The 6 required document items
+  const docs = memberDetails?.documentDetails || application?.documentDetails || {};
+
+  // The 6 required document items mapped to real upload data
   const documentSlots = [
     {
       title: 'Identity Proof',
-      desc: 'Government photo ID (Aadhaar / Voter ID / Passport / Driving Licence)',
+      desc: docs.idProofType || 'Government photo ID (Aadhaar / Voter ID / PAN / Passport)',
       category: 'KYC Document',
+      fileUrl: docs.idProofUrl || '',
+      status: docs.idProofUrl ? 'Verified' : 'Not Uploaded',
     },
     {
       title: 'Address Proof',
-      desc: 'Residential verification proof (Utility Bill / Aadhaar / Bank Statement)',
+      desc: docs.addressProofType || 'Residential verification proof (Utility Bill / Aadhaar / Bank Statement)',
       category: 'KYC Document',
+      fileUrl: docs.addressProofUrl || '',
+      status: docs.addressProofUrl ? 'Verified' : 'Not Uploaded',
     },
     {
       title: 'Photograph',
       desc: 'Recent passport-size photograph of applicant',
       category: 'Identity',
+      fileUrl: docs.photoUrl || '',
+      status: docs.photoUrl ? 'Verified' : 'Not Uploaded',
     },
     {
       title: 'Signature',
       desc: 'Specimen signature / thumb impression for record validation',
       category: 'Specimen',
+      fileUrl: docs.signatureUrl || '',
+      status: docs.signatureUrl ? 'Verified' : 'Not Uploaded',
     },
     {
       title: 'Membership Certificate',
       desc: 'Statutory certificate of membership issued by the Company',
       category: 'Statutory',
+      fileUrl: '',
+      isCertificate: true,
+      status: 'Active',
     },
     {
       title: 'Payment Receipt',
       desc: 'Official acknowledgement receipt for share contribution & admission fee',
       category: 'Receipt',
+      fileUrl: docs.paymentReceiptUrl || '',
+      status: docs.paymentReceiptUrl || application?.status === 'approved' ? 'Verified' : 'Not Uploaded',
     },
   ];
 
@@ -90,7 +109,7 @@ export function MemberDocuments() {
         </div>
       </div>
 
-      {/* DOCUMENT CARDS GRID (6 SLOTS WITH EMPTY/PLACEHOLDER STATES) */}
+      {/* DOCUMENT CARDS GRID */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-black text-slate-900 tracking-tight">
@@ -112,12 +131,20 @@ export function MemberDocuments() {
                   <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                     {doc.category}
                   </span>
-                  <StatusBadge status="Not Uploaded" size="xs" />
+                  <StatusBadge status={doc.status} size="xs" />
                 </div>
 
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 shrink-0">
-                    <FileText className="w-4 h-4" />
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
+                    doc.fileUrl || doc.isCertificate
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                      : 'bg-slate-50 border-slate-200 text-slate-400'
+                  }`}>
+                    {doc.fileUrl || doc.isCertificate ? (
+                      <CheckCircle2 className="w-4 h-4" />
+                    ) : (
+                      <FileText className="w-4 h-4" />
+                    )}
                   </div>
                   <h3 className="text-xs sm:text-sm font-bold text-slate-900">
                     {doc.title}
@@ -130,16 +157,32 @@ export function MemberDocuments() {
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-400 italic">
-                  No documents available.
-                </span>
+                {doc.fileUrl ? (
+                  <a
+                    href={doc.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:text-blue-800 hover:underline"
+                  >
+                    <span>View Document</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                ) : doc.isCertificate ? (
+                  <span className="text-[11px] font-bold text-emerald-700">
+                    Certificate Issued & Active
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-semibold text-slate-400 italic">
+                    Not Uploaded
+                  </span>
+                )}
 
                 <button
                   type="button"
                   onClick={() => setUploadModalOpen(true)}
                   className="text-xs font-bold text-blue-700 hover:text-blue-800 hover:underline cursor-pointer"
                 >
-                  Upload →
+                  {doc.fileUrl ? 'Replace' : 'Upload →'}
                 </button>
               </div>
             </div>

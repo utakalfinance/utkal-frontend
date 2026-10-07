@@ -1,7 +1,7 @@
 import React from 'react';
 import { GalleryHero } from '../components/gallery/GalleryHero';
-import { GalleryIntro } from '../components/gallery/GalleryIntro';
 import { TeamGallery } from '../components/gallery/TeamGallery';
+import { GalleryIntro } from '../components/gallery/GalleryIntro';
 import { GalleryCTA } from '../components/gallery/GalleryCTA';
 
 export function Gallery() {

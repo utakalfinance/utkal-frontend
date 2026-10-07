@@ -1,5 +1,4 @@
 import React from 'react';
-import { Maximize2 } from 'lucide-react';
 
 export function GalleryCard({ image, title, description, label = "OUR TEAM", onClick }) {
   return (
@@ -15,13 +14,6 @@ export function GalleryCard({ image, title, description, label = "OUR TEAM", onC
           className="w-full h-full object-cover object-center group-hover:scale-102 transition-transform duration-500 rounded-t-[18px]"
           loading="lazy"
         />
-        
-        {/* Subtle Hover Zoom Overlay */}
-        <div className="absolute inset-0 bg-slate-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-          <span className="w-10 h-10 rounded-full bg-white/95 text-slate-800 shadow-md flex items-center justify-center transform scale-90 group-hover:scale-100 transition-transform duration-300">
-            <Maximize2 className="w-4 h-4" />
-          </span>
-        </div>
       </div>
 
       {/* Card Body Under Image */}

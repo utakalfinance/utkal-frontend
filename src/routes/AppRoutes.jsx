@@ -29,8 +29,8 @@ import { TransactionsManagement } from '../pages/admin/TransactionsManagement';
 import { Documents } from '../pages/admin/Documents';
 import { NoticesManagement } from '../pages/admin/NoticesManagement';
 import { GalleryManagement } from '../pages/admin/GalleryManagement';
-import { Team } from '../pages/admin/Team';
 import { AdminProfile } from '../pages/admin/AdminProfile';
+import { ProfileUpdateRequests } from '../pages/admin/ProfileUpdateRequests';
 
 import { MyApplication } from '../pages/MyApplication';
 
@@ -60,76 +60,77 @@ export function AppRoutes() {
     <>
       <ScrollToTop />
       <Routes>
-      {/* Main Website Layout */}
-      <Route path="/" element={<MainLayout />}>
-        <Route index element={<Home />} />
-        <Route path="about" element={<About />} />
-        <Route path="services" element={<Services />} />
-        <Route path="loans" element={<LoanProducts />} />
-        <Route path="finance" element={<Finance />} />
-        <Route path="real-estate" element={<RealEstate />} />
-        <Route path="insurance" element={<Insurance />} />
-        <Route path="gallery" element={<Gallery />} />
-        <Route path="contact" element={<Contact />} />
-        <Route path="my-application" element={<MyApplication />} />
-      </Route>
+        {/* Main Website Layout */}
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<Home />} />
+          <Route path="about" element={<About />} />
+          <Route path="services" element={<Services />} />
+          <Route path="loans" element={<LoanProducts />} />
+          <Route path="finance" element={<Finance />} />
+          <Route path="real-estate" element={<RealEstate />} />
+          <Route path="insurance" element={<Insurance />} />
+          <Route path="gallery" element={<Gallery />} />
+          <Route path="contact" element={<Contact />} />
+          <Route path="my-application" element={<MyApplication />} />
+        </Route>
 
-      {/* Standalone Pages */}
-      <Route path="brochure" element={<Brochure />} />
+        {/* Standalone Pages */}
+        <Route path="brochure" element={<Brochure />} />
 
-      {/* Single Unified Role-Based Login Route */}
-      <Route path="login" element={<Login />} />
-      <Route path="member-login" element={<Navigate to="/login" replace />} />
-      <Route path="admin-login" element={<Navigate to="/login" replace />} />
+        {/* Single Unified Role-Based Login Route */}
+        <Route path="login" element={<Login />} />
+        <Route path="member-login" element={<Navigate to="/login" replace />} />
+        <Route path="admin-login" element={<Navigate to="/login" replace />} />
 
-      {/* Statutory Membership Application Portal */}
-      <Route path="register" element={<Register />} />
+        {/* Statutory Membership Application Portal */}
+        <Route path="register" element={<Register />} />
 
-      {/* Member Portal Routes */}
-      <Route path="member" element={<Navigate to="/member-dashboard" replace />} />
-      <Route path="member-dashboard" element={<MemberDashboardLayout />}>
-        <Route index element={<MemberDashboard />} />
-        <Route path="profile" element={<MemberProfile />} />
-        <Route path="membership" element={<MemberMembership />} />
-        <Route path="deposits" element={<MemberDeposits />} />
-        <Route path="payments" element={<MemberPayments />} />
-        <Route path="transactions" element={<MemberTransactions />} />
-        <Route path="documents" element={<MemberDocuments />} />
-        <Route path="notifications" element={<MemberNotifications />} />
-      </Route>
+        {/* Member Portal Routes */}
+        <Route path="member" element={<Navigate to="/member-dashboard" replace />} />
+        <Route path="member-dashboard" element={<MemberDashboardLayout />}>
+          <Route index element={<MemberDashboard />} />
+          <Route path="profile" element={<MemberProfile />} />
+          <Route path="membership" element={<MemberMembership />} />
+          <Route path="deposits" element={<MemberDeposits />} />
+          <Route path="payments" element={<MemberPayments />} />
+          <Route path="transactions" element={<MemberTransactions />} />
+          <Route path="documents" element={<MemberDocuments />} />
+          <Route path="notifications" element={<MemberNotifications />} />
+        </Route>
 
-      {/* Admin Portal Routes */}
-      <Route path="admin" element={<Navigate to="/admin-dashboard" replace />} />
-      <Route path="admin/deposits" element={<Navigate to="/admin-dashboard/deposits" replace />} />
-      <Route path="admin/transactions" element={<Navigate to="/admin-dashboard/transactions" replace />} />
-      <Route path="admin/notices" element={<Navigate to="/admin-dashboard/notices" replace />} />
+        {/* Admin Portal Routes */}
+        <Route path="admin" element={<Navigate to="/admin-dashboard" replace />} />
+        <Route path="admin/deposits" element={<Navigate to="/admin-dashboard/deposits" replace />} />
+        <Route path="admin/transactions" element={<Navigate to="/admin-dashboard/transactions" replace />} />
+        <Route path="admin/notices" element={<Navigate to="/admin-dashboard/notices" replace />} />
 
-      <Route
-        path="admin-dashboard"
-        element={
-          <ProtectedRoute>
-            <AdminDashboardLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<AdminDashboard />} />
-        <Route path="applications" element={<Applications />} />
-        <Route path="applications/:id" element={<ApplicationDetails />} />
-        <Route path="members" element={<Members />} />
-        <Route path="members/:memberId" element={<MemberDetails />} />
-        <Route path="deposits" element={<DepositManagement />} />
-        <Route path="payments" element={<Payments />} />
-        <Route path="transactions" element={<TransactionsManagement />} />
-        <Route path="documents" element={<Documents />} />
-        <Route path="notices" element={<NoticesManagement />} />
-        <Route path="gallery" element={<GalleryManagement />} />
-        <Route path="team" element={<Team />} />
-        <Route path="profile" element={<AdminProfile />} />
-      </Route>
+        <Route
+          path="admin-dashboard"
+          element={
+            <ProtectedRoute>
+              <AdminDashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="applications" element={<Applications />} />
+          <Route path="applications/:id" element={<ApplicationDetails />} />
+          <Route path="members" element={<Members />} />
+          <Route path="members/:memberId" element={<MemberDetails />} />
+          <Route path="profile-updates" element={<ProfileUpdateRequests />} />
+          <Route path="deposits" element={<DepositManagement />} />
+          <Route path="payments" element={<Payments />} />
+          <Route path="transactions" element={<Navigate to="/admin-dashboard/payments" replace />} />
+          <Route path="documents" element={<Documents />} />
+          <Route path="notices" element={<NoticesManagement />} />
+          <Route path="gallery" element={<GalleryManagement />} />
+          <Route path="team" element={<Navigate to="/admin-dashboard" replace />} />
+          <Route path="profile" element={<AdminProfile />} />
+        </Route>
 
-      {/* Fallback route */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* Fallback route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </>
   );
 }

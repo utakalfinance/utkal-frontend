@@ -3,6 +3,7 @@ import {
   memberLoginApi,
   getMemberProfileApi,
   changePasswordApi,
+  updateMemberProfileApi,
 } from '../services/authService';
 
 const MemberAuthContext = createContext(null);
@@ -12,10 +13,19 @@ export function MemberAuthProvider({ children }) {
     const saved = localStorage.getItem('utkal_member_user');
     return saved ? JSON.parse(saved) : null;
   });
+  const [memberDetails, setMemberDetails] = useState(() => {
+    const saved = localStorage.getItem('utkal_member_details');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [application, setApplication] = useState(() => {
     const saved = localStorage.getItem('utkal_member_app');
     return saved ? JSON.parse(saved) : null;
   });
+  const [payments, setPayments] = useState(() => {
+    const saved = localStorage.getItem('utkal_member_payments');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [pendingUpdateRequest, setPendingUpdateRequest] = useState(null);
   const [token, setToken] = useState(() => {
     return localStorage.getItem('utkal_member_token') || null;
   });
@@ -34,14 +44,22 @@ export function MemberAuthProvider({ children }) {
       if (res && res.user) {
         setMemberUser(res.user);
         localStorage.setItem('utkal_member_user', JSON.stringify(res.user));
+        if (res.member) {
+          setMemberDetails(res.member);
+          localStorage.setItem('utkal_member_details', JSON.stringify(res.member));
+        }
         if (res.application) {
           setApplication(res.application);
           localStorage.setItem('utkal_member_app', JSON.stringify(res.application));
         }
+        if (Array.isArray(res.payments)) {
+          setPayments(res.payments);
+          localStorage.setItem('utkal_member_payments', JSON.stringify(res.payments));
+        }
+        setPendingUpdateRequest(res.pendingUpdateRequest || null);
       }
     } catch (err) {
       console.warn('Could not refresh member profile with token:', err.message);
-      // If token expired or invalid, keep existing cache or clear if 401
     } finally {
       setIsLoading(false);
     }
@@ -57,12 +75,21 @@ export function MemberAuthProvider({ children }) {
       const res = await memberLoginApi({ identifier, password });
       setToken(res.token);
       setMemberUser(res.user);
+      setMemberDetails(res.member || null);
       setApplication(res.application || null);
+      setPayments(res.payments || []);
+      setPendingUpdateRequest(res.pendingUpdateRequest || null);
 
       localStorage.setItem('utkal_member_token', res.token);
       localStorage.setItem('utkal_member_user', JSON.stringify(res.user));
+      if (res.member) {
+        localStorage.setItem('utkal_member_details', JSON.stringify(res.member));
+      }
       if (res.application) {
         localStorage.setItem('utkal_member_app', JSON.stringify(res.application));
+      }
+      if (Array.isArray(res.payments)) {
+        localStorage.setItem('utkal_member_payments', JSON.stringify(res.payments));
       }
 
       return res;
@@ -73,11 +100,16 @@ export function MemberAuthProvider({ children }) {
 
   const logout = () => {
     setMemberUser(null);
+    setMemberDetails(null);
     setApplication(null);
+    setPayments([]);
+    setPendingUpdateRequest(null);
     setToken(null);
     localStorage.removeItem('utkal_member_token');
     localStorage.removeItem('utkal_member_user');
+    localStorage.removeItem('utkal_member_details');
     localStorage.removeItem('utkal_member_app');
+    localStorage.removeItem('utkal_member_payments');
   };
 
   const updatePassword = async (currentPassword, newPassword) => {
@@ -94,15 +126,29 @@ export function MemberAuthProvider({ children }) {
     return res;
   };
 
+  const updateProfile = async (profileData) => {
+    const activeToken = token || localStorage.getItem('utkal_member_token');
+    const res = await updateMemberProfileApi(profileData, activeToken);
+
+    if (res && res.pendingUpdateRequest) {
+      setPendingUpdateRequest(res.pendingUpdateRequest);
+    }
+    return res;
+  };
+
   const value = {
     memberUser,
+    memberDetails,
     application,
+    payments,
+    pendingUpdateRequest,
     token,
     isAuthenticated: !!token && !!memberUser,
     isLoading,
     login,
     logout,
     updatePassword,
+    updateProfile,
     refreshProfile,
   };
 

@@ -20,17 +20,33 @@ import { useAdmin } from '../../context/AdminContext';
 import brandLogo from '../../assets/image copy 7.png';
 
 export function AdminSidebar() {
-  const { logoutAdmin, applications = [], notices = [] } = useAdmin();
+  const { 
+    logoutAdmin, 
+    unreadPendingAppsCount = 0, 
+    markAllApplicationsAsSeen,
+    unreadNoticesCount = 0,
+    markAllNoticesAsSeen 
+  } = useAdmin();
   const navigate = useNavigate();
   const location = useLocation();
   const activeRef = useRef(null);
   const scrollContainerRef = useRef(null);
 
-  const pendingApps = applications.filter((a) => {
-    const s = (a.status || '').toLowerCase();
-    return s === 'pending' || s === 'submitted' || s === 'correction required' || s === 'correction_required';
-  }).length;
-  const activeNotices = notices.filter((n) => (n.status || '').toLowerCase() === 'published' || (n.status || '').toLowerCase() === 'active').length;
+  const isApplicationsActive = location.pathname.startsWith('/admin-dashboard/applications');
+  const isNoticesActive = location.pathname.startsWith('/admin-dashboard/notices');
+
+  const pendingApps = isApplicationsActive ? 0 : unreadPendingAppsCount;
+  const activeNotices = isNoticesActive ? 0 : unreadNoticesCount;
+
+  // Clear unread badges when currently viewing the respective pages
+  useEffect(() => {
+    if (isApplicationsActive && typeof markAllApplicationsAsSeen === 'function') {
+      markAllApplicationsAsSeen();
+    }
+    if (isNoticesActive && typeof markAllNoticesAsSeen === 'function') {
+      markAllNoticesAsSeen();
+    }
+  }, [isApplicationsActive, isNoticesActive, markAllApplicationsAsSeen, markAllNoticesAsSeen]);
 
   // Auto-scroll active nav item into view ONLY inside sidebar container without scrolling window
   useEffect(() => {
@@ -63,6 +79,7 @@ export function AdminSidebar() {
         { label: 'Dashboard', path: '/admin-dashboard', icon: LayoutDashboard },
         { label: 'Applications', path: '/admin-dashboard/applications', icon: FileText, badge: pendingApps > 0 ? pendingApps : null, badgeColor: 'bg-amber-500 text-slate-950' },
         { label: 'Members', path: '/admin-dashboard/members', icon: Users },
+        { label: 'Profile Updates', path: '/admin-dashboard/profile-updates', icon: UserCheck },
         { label: 'Documents', path: '/admin-dashboard/documents', icon: FolderCheck },
       ],
     },
@@ -71,7 +88,6 @@ export function AdminSidebar() {
       items: [
         { label: 'Deposits', path: '/admin-dashboard/deposits', icon: PiggyBank },
         { label: 'Payments', path: '/admin-dashboard/payments', icon: CreditCard },
-        { label: 'Transactions', path: '/admin-dashboard/transactions', icon: FileSpreadsheet },
       ],
     },
     {
@@ -85,7 +101,6 @@ export function AdminSidebar() {
     {
       title: 'ADMINISTRATION',
       items: [
-        { label: 'Team', path: '/admin-dashboard/team', icon: UserCheck },
         { label: 'Admin Profile', path: '/admin-dashboard/profile', icon: User },
       ],
     },

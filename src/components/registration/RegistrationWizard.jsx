@@ -474,12 +474,12 @@ export function RegistrationWizard({ activeStep = 1, onQuickFillTrigger }) {
 
       const additionalDocs = Array.isArray(docs.additionalDocuments)
         ? docs.additionalDocuments.map((addDoc, idx) => {
-            const uploadedUrl = uploadedFileUrls[`addDoc_${idx}`];
-            if (uploadedUrl) {
-              return { ...addDoc, documentUrl: uploadedUrl };
-            }
-            return addDoc;
-          })
+          const uploadedUrl = uploadedFileUrls[`addDoc_${idx}`];
+          if (uploadedUrl) {
+            return { ...addDoc, documentUrl: uploadedUrl };
+          }
+          return addDoc;
+        })
         : [];
 
       const doc3Url =
@@ -727,10 +727,9 @@ export function RegistrationWizard({ activeStep = 1, onQuickFillTrigger }) {
           disabled={currentStep === 1 || isSubmitting}
           onClick={handlePrevious}
           className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all border
-            ${
-              currentStep === 1 || isSubmitting
-                ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
-                : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-xs'
+            ${currentStep === 1 || isSubmitting
+              ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
+              : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-xs'
             }
           `}
         >
@@ -754,9 +753,8 @@ export function RegistrationWizard({ activeStep = 1, onQuickFillTrigger }) {
               type="button"
               disabled={isSubmitting}
               onClick={handleSubmitApplication}
-              className={`inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-[#00C853] hover:bg-emerald-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 transition-all ${
-                isSubmitting ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'
-              }`}
+              className={`inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-[#00C853] hover:bg-emerald-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 transition-all ${isSubmitting ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'
+                }`}
             >
               <CheckCircle2 className="w-4 h-4 text-slate-950" />
               <span>{isSubmitting ? 'SUBMITTING...' : 'SUBMIT MEMBERSHIP APPLICATION'}</span>

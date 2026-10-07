@@ -6,6 +6,7 @@ import { BarChart3, TrendingUp, Users, CheckCircle2, Clock, AlertTriangle, XCirc
 
 export function AdminDashboard() {
   const { applications, refreshData } = useAdmin();
+  const [activeCardFilter, setActiveCardFilter] = React.useState('ALL');
 
   useEffect(() => {
     if (typeof refreshData === 'function') {
@@ -38,12 +39,28 @@ export function AdminDashboard() {
     { label: 'Rejected', count: rejected, percent: calcPercent(rejected), color: 'bg-rose-500', textColor: 'text-rose-700', icon: XCircle },
   ];
 
+  const getGreeting = () => {
+    const currentHour = new Date().getHours();
+    if (currentHour >= 5 && currentHour < 12) {
+      return 'Good Morning';
+    }
+    if (currentHour >= 12 && currentHour < 17) {
+      return 'Good Afternoon';
+    }
+    if (currentHour >= 17 && currentHour < 21) {
+      return 'Good Evening';
+    }
+    return 'Good Night';
+  };
+
+  const greeting = getGreeting();
+
   return (
     <div className="space-y-6 text-left animate-fade-in">
       {/* PAGE HEADER */}
       <div className="space-y-1">
         <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
-          Good Morning, Admin
+          {greeting}, Admin
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 font-medium">
           <span className="hidden sm:inline">Here&apos;s what&apos;s happening with New Utkal Finance today.</span>
@@ -52,7 +69,10 @@ export function AdminDashboard() {
       </div>
 
       {/* 4 STATISTIC CARDS */}
-      <DashboardStats />
+      <DashboardStats
+        activeFilter={activeCardFilter}
+        onSelectFilter={(filterId) => setActiveCardFilter(filterId)}
+      />
 
       {/* TWO COLUMN GRID: APPLICATION OVERVIEW CHART + RECENT SUMMARY */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -105,7 +125,10 @@ export function AdminDashboard() {
 
         {/* RECENT APPLICATIONS TABLE WIDGET */}
         <div className="lg:col-span-2">
-          <RecentApplications />
+          <RecentApplications
+            activeFilter={activeCardFilter}
+            onResetFilter={() => setActiveCardFilter('ALL')}
+          />
         </div>
       </div>
     </div>

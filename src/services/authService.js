@@ -89,6 +89,35 @@ export async function changePasswordApi({ currentPassword, newPassword }, token)
 }
 
 /**
+ * Update authenticated member profile
+ * PUT /api/auth/profile
+ * @param {Object} profileData
+ * @param {string} [token]
+ */
+export async function updateMemberProfileApi(profileData, token) {
+  const authToken = token || localStorage.getItem('utkal_member_token');
+  if (!authToken) {
+    throw new Error('Not authenticated');
+  }
+
+  const response = await fetch(`${apiConfig.baseURL}/auth/profile`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${authToken}`,
+    },
+    body: JSON.stringify(profileData),
+  });
+
+  const data = await response.json();
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || 'Failed to update profile details');
+  }
+
+  return data;
+}
+
+/**
  * Legacy portal helpers
  */
 export async function loginUser(credentials) {

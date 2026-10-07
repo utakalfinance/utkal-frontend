@@ -1,11 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Bell, Edit2, Trash2, Calendar, AlertCircle } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 
 export function Notices() {
-  const { notices, addNotice, updateNotice, deleteNotice } = useAdmin();
+  const { notices, addNotice, updateNotice, deleteNotice, markAllNoticesAsSeen } = useAdmin();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+
+  useEffect(() => {
+    if (typeof markAllNoticesAsSeen === 'function') {
+      markAllNoticesAsSeen();
+    }
+  }, [markAllNoticesAsSeen]);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');

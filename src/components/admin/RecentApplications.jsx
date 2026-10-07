@@ -4,33 +4,87 @@ import { Eye, ArrowRight, FileText } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import { StatusBadge } from './StatusBadge';
 
-export function RecentApplications() {
+export function RecentApplications({ activeFilter = 'ALL', onResetFilter }) {
   const { applications } = useAdmin();
   const navigate = useNavigate();
 
-  const recent = applications.slice(0, 5);
+  const filteredApps = applications.filter((a) => {
+    const s = (a.status || '').toLowerCase();
+    if (activeFilter === 'PENDING') {
+      return s === 'pending' || s === 'submitted' || s === 'correction required' || s === 'correction_required';
+    }
+    if (activeFilter === 'APPROVED') {
+      return s === 'approved';
+    }
+    if (activeFilter === 'PAYMENTS') {
+      return Boolean(a.totalPaid || a.payment?.amount || a.paymentReceiptUrl);
+    }
+    return true;
+  });
+
+  const recent = filteredApps.slice(0, 7);
+
+  const getFilterTitle = () => {
+    if (activeFilter === 'PENDING') return 'Pending Review Applications';
+    if (activeFilter === 'APPROVED') return 'Approved Member Applications';
+    if (activeFilter === 'PAYMENTS') return 'Applications with Payment Records';
+    return 'Recent Statutory Applications';
+  };
+
+  const getFilterBadge = () => {
+    if (activeFilter === 'PENDING') return { text: 'PENDING', bg: 'bg-amber-100 text-amber-800' };
+    if (activeFilter === 'APPROVED') return { text: 'APPROVED', bg: 'bg-emerald-100 text-emerald-800' };
+    if (activeFilter === 'PAYMENTS') return { text: 'PAYMENTS', bg: 'bg-blue-100 text-blue-800' };
+    return { text: 'ALL', bg: 'bg-slate-100 text-slate-700' };
+  };
+
+  const badge = getFilterBadge();
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden text-left space-y-0">
       <div className="p-5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <FileText className="w-4 h-4 text-blue-700" />
-            <span>Recent Statutory Applications</span>
-          </h3>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">
-            Latest membership registrations submitted for statutory approval.
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <FileText className="w-4 h-4 text-blue-700" />
+              <span>{getFilterTitle()}</span>
+            </h3>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${badge.bg}`}>
+              {filteredApps.length} total
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 font-medium">
+            {activeFilter === 'ALL'
+              ? 'Latest membership registrations submitted for statutory approval.'
+              : `Showing records filtered by ${getFilterTitle().toLowerCase()}.`}
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => navigate('/admin-dashboard/applications')}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
-        >
-          <span>View All</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-2">
+          {activeFilter !== 'ALL' && (
+            <button
+              type="button"
+              onClick={onResetFilter}
+              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs transition-colors cursor-pointer"
+            >
+              Show All
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              if (activeFilter === 'PAYMENTS') {
+                navigate('/admin-dashboard/payments');
+              } else {
+                navigate('/admin-dashboard/applications');
+              }
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs transition-colors cursor-pointer"
+          >
+            <span>View Full Portal</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* MOBILE CARDS VIEW (Phone screens < 640px) */}

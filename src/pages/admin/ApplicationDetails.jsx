@@ -42,7 +42,7 @@ import indusIndQr from '../../assets/image copy 23.png';
 export function ApplicationDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { applications, updateApplicationStatus, updateApplication, resendCredentials } = useAdmin();
+  const { applications, updateApplicationStatus, updateApplication, resendCredentials, markApplicationAsSeen } = useAdmin();
 
   const [message, setMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -52,6 +52,12 @@ export function ApplicationDetails() {
   const [selectedDocPreview, setSelectedDocPreview] = useState(null);
   const [docZoom, setDocZoom] = useState(1);
   const [docRotation, setDocRotation] = useState(0);
+
+  useEffect(() => {
+    if (id && typeof markApplicationAsSeen === 'function') {
+      markApplicationAsSeen(id);
+    }
+  }, [id, markApplicationAsSeen]);
 
   // Keyboard shortcut: ESC to close preview modal
   useEffect(() => {

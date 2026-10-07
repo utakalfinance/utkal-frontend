@@ -1,31 +1,82 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Bell, Menu, User, Settings, LogOut, ChevronDown, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Search, Bell, Menu, LogOut, ChevronDown, ShieldCheck, CheckCircle2, X, Users, CreditCard, FileText, ArrowRight } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 
 import brandLogo from '../../assets/image copy 7.png';
 
 export function AdminHeader({ onToggleMobileMenu }) {
-  const { adminUser, logoutAdmin, applications } = useAdmin();
+  const { 
+    adminUser, 
+    logoutAdmin, 
+    applications = [], 
+    members = [], 
+    payments = [], 
+    unreadPendingAppsCount = 0, 
+    markAllApplicationsAsSeen, 
+    markApplicationAsSeen 
+  } = useAdmin();
   const navigate = useNavigate();
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-  const [notifPopoverOpen, setNotifPopoverOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
 
   const dropdownRef = useRef(null);
-  const notifRef = useRef(null);
+  const searchRef = useRef(null);
 
-  const pendingCount = applications.filter((a) => {
-    const s = (a.status || '').toLowerCase();
-    return s === 'pending' || s === 'submitted' || s === 'correction required' || s === 'correction_required';
-  }).length;
+  const pendingCount = unreadPendingAppsCount;
+
+  // Realtime multi-entity search filtering
+  const trimmedQuery = searchQuery.trim().toLowerCase();
+
+  const matchingApps = trimmedQuery
+    ? applications
+        .filter((a) => {
+          return (
+            (a.applicantName || '').toLowerCase().includes(trimmedQuery) ||
+            (a.id || '').toLowerCase().includes(trimmedQuery) ||
+            (a.applicationId || '').toLowerCase().includes(trimmedQuery) ||
+            (a.mobile || '').includes(trimmedQuery) ||
+            (a.email || '').toLowerCase().includes(trimmedQuery)
+          );
+        })
+        .slice(0, 4)
+    : [];
+
+  const matchingMembers = trimmedQuery
+    ? members
+        .filter((m) => {
+          return (
+            (m.fullName || m.applicantName || m.name || '').toLowerCase().includes(trimmedQuery) ||
+            (m.memberId || m.id || '').toLowerCase().includes(trimmedQuery) ||
+            (m.mobile || '').includes(trimmedQuery) ||
+            (m.email || '').toLowerCase().includes(trimmedQuery)
+          );
+        })
+        .slice(0, 3)
+    : [];
+
+  const matchingPayments = trimmedQuery
+    ? payments
+        .filter((p) => {
+          return (
+            (p.utrNumber || p.utr || '').toLowerCase().includes(trimmedQuery) ||
+            (p.applicantName || p.memberName || '').toLowerCase().includes(trimmedQuery) ||
+            (p.id || '').toLowerCase().includes(trimmedQuery)
+          );
+        })
+        .slice(0, 3)
+    : [];
+
+  const hasSearchResults = matchingApps.length > 0 || matchingMembers.length > 0 || matchingPayments.length > 0;
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setUserDropdownOpen(false);
       }
-      if (notifRef.current && !notifRef.current.contains(event.target)) {
-        setNotifPopoverOpen(false);
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setSearchFocused(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -35,6 +86,21 @@ export function AdminHeader({ onToggleMobileMenu }) {
   const handleLogout = () => {
     logoutAdmin();
     navigate('/admin-login');
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (!trimmedQuery) return;
+    setSearchFocused(false);
+    if (matchingApps.length > 0) {
+      navigate(`/admin-dashboard/applications/${matchingApps[0]._id || matchingApps[0].id}`);
+    } else if (matchingMembers.length > 0) {
+      navigate(`/admin-dashboard/members`);
+    } else if (matchingPayments.length > 0) {
+      navigate(`/admin-dashboard/payments`);
+    } else {
+      navigate(`/admin-dashboard/applications`);
+    }
   };
 
   return (
@@ -69,70 +135,180 @@ export function AdminHeader({ onToggleMobileMenu }) {
             </div>
           </div>
 
-          {/* DESKTOP SEARCH BAR */}
-          <div className="relative w-full max-w-sm hidden md:block">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search applications, members, UTR..."
-              className="w-full bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-xs text-slate-900 rounded-xl pl-9 pr-4 py-2 border border-slate-200 focus:border-blue-600 focus:outline-none transition-all"
-            />
+          {/* DESKTOP SEARCH BAR WITH LIVE RESULTS POPUP */}
+          <div className="relative w-full max-w-sm hidden md:block" ref={searchRef}>
+            <form onSubmit={handleSearchSubmit} className="relative w-full">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setSearchFocused(true);
+                }}
+                onFocus={() => setSearchFocused(true)}
+                placeholder="Search applications, members, UTR..."
+                className="w-full bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-xs text-slate-900 rounded-xl pl-9 pr-8 py-2 border border-slate-200 focus:border-blue-600 focus:outline-none transition-all"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSearchFocused(false);
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-md hover:bg-slate-200 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </form>
+
+            {/* LIVE SEARCH RESULTS DROPDOWN */}
+            {searchFocused && trimmedQuery && (
+              <div className="absolute left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-200 shadow-2xl py-2.5 z-50 text-left animate-fade-in max-h-96 overflow-y-auto divide-y divide-slate-100">
+                {/* APPLICATIONS SECTION */}
+                {matchingApps.length > 0 && (
+                  <div className="py-1">
+                    <div className="px-3.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                      <FileText className="w-3 h-3 text-blue-600" />
+                      <span>Applications ({matchingApps.length})</span>
+                    </div>
+                    {matchingApps.map((app) => (
+                      <div
+                        key={app._id || app.id}
+                        onClick={() => {
+                          setSearchFocused(false);
+                          setSearchQuery('');
+                          navigate(`/admin-dashboard/applications/${app._id || app.id}`);
+                        }}
+                        className="px-3.5 py-2 hover:bg-blue-50/70 cursor-pointer transition-colors flex items-center justify-between group"
+                      >
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-xs text-slate-900 group-hover:text-blue-700 truncate">
+                              {app.applicantName}
+                            </span>
+                            <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-bold">
+                              {app.id}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-400 truncate">
+                            {app.mobile} {app.email ? `• ${app.email}` : ''}
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide group-hover:text-blue-600 flex items-center gap-0.5 shrink-0 ml-2">
+                          View <ArrowRight className="w-3 h-3" />
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* MEMBERS SECTION */}
+                {matchingMembers.length > 0 && (
+                  <div className="py-1">
+                    <div className="px-3.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                      <Users className="w-3 h-3 text-emerald-600" />
+                      <span>Members ({matchingMembers.length})</span>
+                    </div>
+                    {matchingMembers.map((member) => (
+                      <div
+                        key={member._id || member.id || member.memberId}
+                        onClick={() => {
+                          setSearchFocused(false);
+                          setSearchQuery('');
+                          navigate(`/admin-dashboard/members`);
+                        }}
+                        className="px-3.5 py-2 hover:bg-emerald-50/70 cursor-pointer transition-colors flex items-center justify-between group"
+                      >
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-xs text-slate-900 group-hover:text-emerald-700 truncate">
+                              {member.fullName || member.applicantName || member.name}
+                            </span>
+                            <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 font-bold">
+                              {member.memberId || member.id}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-400 truncate">{member.mobile}</div>
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide group-hover:text-emerald-600 flex items-center gap-0.5 shrink-0 ml-2">
+                          View <ArrowRight className="w-3 h-3" />
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* PAYMENTS / UTR SECTION */}
+                {matchingPayments.length > 0 && (
+                  <div className="py-1">
+                    <div className="px-3.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                      <CreditCard className="w-3 h-3 text-amber-600" />
+                      <span>Payments / UTR ({matchingPayments.length})</span>
+                    </div>
+                    {matchingPayments.map((p) => (
+                      <div
+                        key={p.id || p.utrNumber}
+                        onClick={() => {
+                          setSearchFocused(false);
+                          setSearchQuery('');
+                          navigate(`/admin-dashboard/payments`);
+                        }}
+                        className="px-3.5 py-2 hover:bg-amber-50/70 cursor-pointer transition-colors flex items-center justify-between group"
+                      >
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-slate-900 group-hover:text-amber-700">
+                              UTR: {p.utrNumber || p.utr || p.id}
+                            </span>
+                            <span className="text-xs font-black text-emerald-700">
+                              ₹{p.amount || 200}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-400 truncate">
+                            {p.applicantName || p.memberName || 'Membership Payment'}
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide group-hover:text-amber-600 flex items-center gap-0.5 shrink-0 ml-2">
+                          View <ArrowRight className="w-3 h-3" />
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* NO RESULTS */}
+                {!hasSearchResults && (
+                  <div className="p-4 text-center space-y-1">
+                    <p className="text-xs font-bold text-slate-700">No matching records found</p>
+                    <p className="text-[11px] text-slate-400">
+                      No applications, members, or UTRs match &quot;{searchQuery}&quot;
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
         {/* RIGHT: NOTIFICATION & ADMIN USER PROFILE DROPDOWN */}
         <div className="flex items-center gap-3">
-          {/* NOTIFICATION POPOVER */}
-          <div className="relative" ref={notifRef}>
-            <button
-              type="button"
-              onClick={() => setNotifPopoverOpen(!notifPopoverOpen)}
-              className="relative p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors border border-slate-200/80 cursor-pointer"
-              title="Notifications"
-            >
-              <Bell className="w-4 h-4" />
-              {pendingCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] font-black flex items-center justify-center border-2 border-white">
-                  {pendingCount}
-                </span>
-              )}
-            </button>
-
-            {notifPopoverOpen && (
-              <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-sm bg-white rounded-2xl border border-slate-200 shadow-xl py-3 z-50 text-left animate-fade-in">
-                <div className="px-4 pb-2 border-b border-slate-100 flex items-center justify-between">
-                  <span className="text-xs font-black text-slate-900">Notifications</span>
-                  <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold">
-                    {pendingCount} Pending
-                  </span>
-                </div>
-                <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 text-xs">
-                  {applications
-                    .filter((a) => a.status === 'Pending')
-                    .slice(0, 4)
-                    .map((app) => (
-                      <div
-                        key={app.id}
-                        onClick={() => {
-                          setNotifPopoverOpen(false);
-                          navigate(`/admin-dashboard/applications/${app.id}`);
-                        }}
-                        className="p-3 hover:bg-slate-50 cursor-pointer transition-colors space-y-0.5"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-extrabold text-slate-900">{app.applicantName}</span>
-                          <span className="text-[10px] text-slate-400 font-mono">{app.id}</span>
-                        </div>
-                        <p className="text-[11px] text-slate-500">New Membership Application pending approval.</p>
-                      </div>
-                    ))}
-                  {pendingCount === 0 && (
-                    <div className="p-4 text-center text-slate-400 text-xs">No pending notifications</div>
-                  )}
-                </div>
-              </div>
+          {/* NOTIFICATION BUTTON - NAVIGATE TO NOTICES PAGE */}
+          <button
+            type="button"
+            onClick={() => navigate('/admin-dashboard/notices')}
+            className="relative p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors border border-slate-200/80 cursor-pointer"
+            title="Notices & Circulars"
+          >
+            <Bell className="w-4 h-4" />
+            {pendingCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] font-black flex items-center justify-center border-2 border-white">
+                {pendingCount}
+              </span>
             )}
-          </div>
+          </button>
 
           {/* ADMIN USER PROFILE DROPDOWN */}
           <div className="relative" ref={dropdownRef}>
@@ -158,31 +334,7 @@ export function AdminHeader({ onToggleMobileMenu }) {
                   <p className="text-[11px] text-slate-500 font-mono truncate">{adminUser.email}</p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUserDropdownOpen(false);
-                    navigate('/admin-dashboard/profile');
-                  }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  <User className="w-4 h-4 text-slate-500" />
-                  <span>Profile</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUserDropdownOpen(false);
-                    navigate('/admin-dashboard/profile');
-                  }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  <Settings className="w-4 h-4 text-slate-500" />
-                  <span>Settings</span>
-                </button>
-
-                <div className="border-t border-slate-100 pt-1">
+                <div className="pt-1">
                   <button
                     type="button"
                     onClick={handleLogout}

@@ -35,14 +35,13 @@ export function AdminMobileMenu({ isOpen, onClose }) {
     { label: 'Dashboard', path: '/admin-dashboard', icon: LayoutDashboard },
     { label: 'Applications Desk', path: '/admin-dashboard/applications', icon: FileText },
     { label: 'Member Management', path: '/admin-dashboard/members', icon: Users },
+    { label: 'Profile Update Requests', path: '/admin-dashboard/profile-updates', icon: UserCheck },
     { label: 'Documents & Audit', path: '/admin-dashboard/documents', icon: FolderCheck },
     { label: 'Deposit Management', path: '/admin-dashboard/deposits', icon: PiggyBank },
     { label: 'Payments', path: '/admin-dashboard/payments', icon: CreditCard },
-    { label: 'Transactions', path: '/admin-dashboard/transactions', icon: FileSpreadsheet },
     { label: 'Notices & Circulars', path: '/admin-dashboard/notices', icon: Bell },
     { label: 'Gallery Management', path: '/admin-dashboard/gallery', icon: ImageIcon },
     { label: 'Company Brochure', path: '/brochure', icon: BookOpen },
-    { label: 'Team Management', path: '/admin-dashboard/team', icon: UserCheck },
     { label: 'Admin Profile & Settings', path: '/admin-dashboard/profile', icon: User },
   ];
 

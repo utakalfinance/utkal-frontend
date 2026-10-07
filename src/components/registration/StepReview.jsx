@@ -289,16 +289,15 @@ export function StepReview({ formData = {}, onGoToStep, onSubmit, onPaymentChang
               <div>
                 <span className="text-slate-400 block text-[11px]">Primary Govt ID Proof:</span>
                 <span className="font-semibold text-emerald-700 flex items-center gap-1 mt-0.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> {documents.idProofType} ({documents.docRefNo || '9874 5612 3041'})
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {documents.idProofType || 'Aadhaar Card'} {documents.idProofNumber ? `(${documents.idProofNumber})` : ''}
                 </span>
               </div>
               <div>
                 <span className="text-slate-400 block text-[11px]">Attachments Uploaded:</span>
-                <span className={`font-semibold flex items-center gap-1 mt-0.5 ${
-                  [documents.doc1_photo, documents.doc2_govId, documents.doc3_eduCert, documents.doc4_birthCert, documents.doc5_utility].filter(Boolean).length === 5
+                <span className={`font-semibold flex items-center gap-1 mt-0.5 ${[documents.doc1_photo, documents.doc2_govId, documents.doc3_eduCert, documents.doc4_birthCert, documents.doc5_utility].filter(Boolean).length === 5
                     ? 'text-emerald-700'
                     : 'text-amber-700'
-                }`}>
+                  }`}>
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   {[documents.doc1_photo, documents.doc2_govId, documents.doc3_eduCert, documents.doc4_birthCert, documents.doc5_utility].filter(Boolean).length} of 5 KYC Documents Attached
                 </span>

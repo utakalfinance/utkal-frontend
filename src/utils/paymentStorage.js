@@ -10,6 +10,18 @@ import { getDeposits } from './depositStorage';
 
 const PAYMENTS_KEY = 'utkal_finance_payments';
 
+const MOCK_APP_IDS = new Set(['NUF-10231', 'NUF-10230', 'NUF-10229', 'NUF-10228', 'NUF-10227']);
+const MOCK_PAYMENT_IDS = new Set(['PAY-10231', 'PAY-10230', 'PAY-10229', 'PAY-10228', 'PAY-10227', 'TXN-9812401', 'TXN-9812400', 'TXN-9812399', 'TXN-9812398', 'TXN-9812397']);
+const MOCK_NAMES = new Set(['Mr. Rahul Kumar Das', 'Ms. Priya Rout', 'Mr. Amit Kumar Swain', 'Mrs. Sneha Mohanty', 'Mr. Priyabrata Kumar Mohapatra', 'Rahul Kumar Das', 'Priya Rout', 'Amit Kumar Swain', 'Sneha Mohanty', 'Priyabrata Kumar Mohapatra']);
+
+function isMockPayment(p) {
+  if (!p) return true;
+  if (MOCK_PAYMENT_IDS.has(p.paymentId) || MOCK_PAYMENT_IDS.has(p.id) || MOCK_PAYMENT_IDS.has(p.transactionId) || MOCK_PAYMENT_IDS.has(p.txnId)) return true;
+  if (MOCK_APP_IDS.has(p.applicationId) || MOCK_APP_IDS.has(p.appId)) return true;
+  if (MOCK_NAMES.has(p.memberName) || MOCK_NAMES.has(p.member)) return true;
+  return false;
+}
+
 /**
  * Safely parse JSON from localStorage
  */
@@ -37,98 +49,120 @@ function setItem(key, value) {
 }
 
 /**
- * Generate derived payment records from existing applications & deposits
+ * Derive real payment records from live submitted applications
+ * STRICT RULE: ONLY applications that have been APPROVED by Admin appear in the Payments ledger.
  */
-function getDerivedInitialPayments() {
-  const apps = getApplications();
-  const deposits = getDeposits();
-  const derived = [];
+export function derivePaymentsFromApplications(apps = []) {
+  if (!Array.isArray(apps)) return [];
+  return apps
+    .filter((app) => {
+      if (!app || isMockPayment(app) || MOCK_APP_IDS.has(app.id) || MOCK_APP_IDS.has(app.applicationId)) {
+        return false;
+      }
+      const statusLower = (app.status || '').trim().toLowerCase();
+      // Only include if Admin has officially APPROVED the application
+      return statusLower === 'approved';
+    })
+    .map((app) => {
+      const p = app.personalDetails || app.personal || {};
+      const applicantName =
+        app.applicantName ||
+        [p.title || app.title, p.firstName || app.firstName, p.middleName || app.middleName, p.lastName || app.lastName]
+          .filter(Boolean)
+          .join(' ') ||
+        'Valued Member';
 
-  // 1. Applications Payments
-  apps.forEach((app) => {
-    const appId = app.id || app.applicationId || '';
-    const status = app.status === 'Approved' ? 'Paid' : app.status === 'Rejected' ? 'Failed' : 'Pending';
+      const appId = app.applicationId || app.id || app._id || '';
+      const cleanDigits = appId.replace(/\D/g, '') || '1001';
+      const memberId =
+        app.memberId ||
+        app.account?.memberId ||
+        `NUF-M-${cleanDigits.slice(-4).padStart(4, '0')}`;
 
-    derived.push({
-      id: `PAY-${appId.replace('NUF-', '')}`,
-      paymentId: `PAY-${appId.replace('NUF-', '')}`,
-      memberId: app.memberId || '',
-      memberName: app.applicantName || 'Applicant',
-      applicationId: appId,
-      depositId: '',
-      purpose: 'Membership Application Fee',
-      amount: Number(app.totalPaid) || 200,
-      paymentMethod: app.paymentMethod || 'UPI (Google Pay)',
-      utrNo: app.utrNo || `UTR${Math.floor(100000000000 + Math.random() * 900000000000)}`,
-      transactionId: app.utrNo || `TXN-${appId.replace('NUF-', '')}`,
-      date: app.date || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      rawDate: app.createdAt || new Date().toISOString(),
-      status,
-      notes: 'Initial statutory membership application processing fee.',
-      history: [
-        {
-          field: 'Payment Status',
-          oldValue: 'Created',
-          newValue: status,
-          changedAt: app.date || new Date().toLocaleString('en-GB'),
-          changedBy: 'System',
-        },
-      ],
-      createdAt: app.createdAt || new Date().toISOString(),
-    });
-  });
+      const amt = Number(app.totalPaid || app.paymentDetails?.amount || app.membershipDetails?.totalContribution || 200);
+      const payMethod = app.paymentMethod || app.paymentDetails?.method || 'UPI (IndusInd Bank QR)';
+      const utr = app.paymentDetails?.utrNumber || app.utrNo || `UPI_VERIFIED`;
+      const txnId = app.transactionId || app.receiptNo || (utr !== 'UPI_VERIFIED' ? utr : `TXN-${cleanDigits}`);
 
-  // 2. Deposits Payments
-  deposits.forEach((dep) => {
-    const depId = dep.depositId || dep.id || '';
-    if (!derived.some((p) => p.depositId === depId)) {
-      derived.push({
-        id: `PAY-DEP-${depId.replace('DEP-2026-', '')}`,
-        paymentId: `PAY-DEP-${depId.replace('DEP-2026-', '')}`,
-        memberId: dep.memberId || '',
-        memberName: dep.applicantName || dep.memberName || 'Member',
-        applicationId: dep.applicationId || '',
-        depositId: depId,
-        purpose: `${dep.depositType || 'Fixed Deposit'} Opening`,
-        amount: Number(dep.amount) || 0,
-        paymentMethod: dep.paymentMethod || 'UPI (Google Pay)',
-        utrNo: dep.utrNo || dep.transactionId || `UTR${Math.floor(100000000000 + Math.random() * 900000000000)}`,
-        transactionId: dep.transactionId || dep.utrNo || `TXN-DEP-${depId.replace('DEP-', '')}`,
-        date: dep.depositDate || dep.startDate || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-        rawDate: dep.createdAt || new Date().toISOString(),
-        status: dep.status === 'Rejected' ? 'Failed' : dep.status === 'Pending' ? 'Pending' : 'Paid',
-        notes: dep.notes || 'Member deposit contribution.',
+      const payDate =
+        app.approvalDate ||
+        app.date ||
+        (app.submittedAt
+          ? new Date(app.submittedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+          : new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }));
+
+      return {
+        id: `PAY-${cleanDigits}`,
+        paymentId: `PAY-${cleanDigits}`,
+        memberId: memberId,
+        memberName: applicantName,
+        applicationId: appId,
+        depositId: '',
+        purpose: 'Statutory Membership & Share Capital (10 Shares)',
+        amount: amt,
+        paymentMethod: payMethod,
+        utrNo: utr,
+        transactionId: txnId,
+        date: payDate,
+        rawDate: app.submittedAt || app.createdAt || new Date().toISOString(),
+        status: 'Paid',
+        receiptUrl: app.paymentReceiptUrl || app.paymentDetails?.receiptUrl || '',
+        receiptFileName: app.paymentReceiptName || app.paymentDetails?.receiptFileName || 'Statutory_Payment_Receipt.png',
+        notes: `Statutory membership subscription for ${applicantName}. Application ${appId} approved by Admin.`,
         history: [
           {
             field: 'Payment Status',
-            oldValue: 'Draft',
-            newValue: dep.status === 'Rejected' ? 'Failed' : 'Paid',
-            changedAt: dep.depositDate || new Date().toLocaleString('en-GB'),
-            changedBy: 'System',
+            oldValue: 'Pending Approval',
+            newValue: 'Paid',
+            changedAt: payDate,
+            changedBy: 'Admin (Approval)',
           },
         ],
-        createdAt: dep.createdAt || new Date().toISOString(),
-      });
-    }
-  });
-
-  return derived;
+        createdAt: app.submittedAt || app.createdAt || new Date().toISOString(),
+      };
+    });
 }
 
 /**
- * Get all payment records stored in localStorage.
- * If empty, initializes with derived records from applications & deposits.
+ * Get all payment records stored in localStorage and derived from applications.
+ * All dummy mock data is permanently excluded.
  */
-export function getPayments() {
-  const stored = getItem(PAYMENTS_KEY, null);
-  if (!stored) {
-    const initialDerived = getDerivedInitialPayments();
-    if (initialDerived.length > 0) {
-      setItem(PAYMENTS_KEY, initialDerived);
-    }
-    return initialDerived;
+export function getPayments(liveApplications = null) {
+  const rawStored = getItem(PAYMENTS_KEY, []);
+  const validStored = Array.isArray(rawStored) ? rawStored.filter((p) => !isMockPayment(p)) : [];
+
+  if (Array.isArray(rawStored) && rawStored.length !== validStored.length) {
+    setItem(PAYMENTS_KEY, validStored);
   }
-  return stored;
+
+  const appsSource = Array.isArray(liveApplications) && liveApplications.length > 0
+    ? liveApplications
+    : getApplications();
+
+  const derived = derivePaymentsFromApplications(appsSource);
+
+  // Merge unique user-created manual payments with live application payments
+  const combined = [...derived];
+  validStored.forEach((storedP) => {
+    // If the stored payment is linked to an unapproved application, do NOT display it
+    if (storedP.applicationId) {
+      const linkedApp = appsSource.find(
+        (a) => a.applicationId === storedP.applicationId || a.id === storedP.applicationId || a._id === storedP.applicationId
+      );
+      if (linkedApp && (linkedApp.status || '').trim().toLowerCase() !== 'approved') {
+        return; // Skip unapproved application payments
+      }
+    }
+
+    const exists = combined.some(
+      (c) => (c.paymentId && c.paymentId === storedP.paymentId) || (c.applicationId && storedP.applicationId && c.applicationId === storedP.applicationId)
+    );
+    if (!exists) {
+      combined.unshift(storedP);
+    }
+  });
+
+  return combined;
 }
 
 /**

@@ -105,12 +105,13 @@ export function getCurrentUser() {
 // ==========================================
 
 export function getApplications() {
-  const apps = getItem(APPLICATIONS_KEY, null);
-  if (!apps) {
-    setItem(APPLICATIONS_KEY, INITIAL_APPLICATIONS);
-    return INITIAL_APPLICATIONS;
+  const apps = getItem(APPLICATIONS_KEY, []);
+  const mockIds = new Set(['NUF-10231', 'NUF-10230', 'NUF-10229', 'NUF-10228', 'NUF-10227']);
+  const validApps = Array.isArray(apps) ? apps.filter((a) => !mockIds.has(a.id) && !mockIds.has(a.applicationId)) : [];
+  if (Array.isArray(apps) && apps.length !== validApps.length) {
+    setItem(APPLICATIONS_KEY, validApps);
   }
-  return apps;
+  return validApps;
 }
 
 export function generateApplicationId() {

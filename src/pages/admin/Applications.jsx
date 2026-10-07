@@ -7,13 +7,16 @@ import { EditApplicationModal } from '../../components/admin/EditApplicationModa
 import { PaymentReceiptModal } from '../../components/admin/PaymentReceiptModal';
 
 export function Applications() {
-  const { applications, updateApplicationStatus, updateApplication, refreshData } = useAdmin();
+  const { applications, updateApplicationStatus, updateApplication, refreshData, markAllApplicationsAsSeen } = useAdmin();
 
   useEffect(() => {
     if (typeof refreshData === 'function') {
       refreshData();
     }
-  }, [refreshData]);
+    if (typeof markAllApplicationsAsSeen === 'function') {
+      markAllApplicationsAsSeen();
+    }
+  }, [refreshData, markAllApplicationsAsSeen]);
 
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
@@ -26,24 +29,33 @@ export function Applications() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Quick Add Member Bar toggle
-  const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [quickForm, setQuickForm] = useState({
-    name: '',
-    email: '',
-    mobile: '',
-    city: 'Bhubaneswar',
-    deposit: '25000',
-  });
 
-  // Calculate Stat Counts (case-insensitive)
+  // Calculate Stat Counts (case-insensitive & distinct)
   const totalCount = applications.length;
-  const pendingCount = applications.filter((a) => (a.status || '').toLowerCase() === 'pending').length;
+  const submittedCount = applications.filter((a) => {
+    const s = (a.status || '').toLowerCase();
+    return s === 'pending' || s === 'submitted';
+  }).length;
+  const pendingCount = submittedCount;
+  
+  const paymentVerificationCount = applications.filter((a) => {
+    const s = (a.status || '').toLowerCase();
+    const isPending = s === 'pending' || s === 'submitted';
+    const payStatus = (a.paymentDetails?.paymentStatus || a.paymentStatus || '').toLowerCase();
+    const hasReceipt = Boolean(a.paymentReceiptUrl || a.paymentDetails?.receiptUrl);
+    return isPending && (hasReceipt || payStatus === 'pending' || payStatus === 'unverified');
+  }).length;
+
+  const pendingDocsCount = applications.filter((a) => {
+    const s = (a.status || '').toLowerCase();
+    const isCorrection = s === 'correction required' || s === 'correction_required';
+    const hasMissingDocs = !a.idProofUrl || !a.photoUrl || !a.signatureUrl;
+    return isCorrection || (s === 'pending' && hasMissingDocs);
+  }).length;
+  const pendingKycCount = pendingDocsCount;
+
   const approvedCount = applications.filter((a) => (a.status || '').toLowerCase() === 'approved').length;
   const rejectedCount = applications.filter((a) => (a.status || '').toLowerCase() === 'rejected').length;
-  const pendingKycCount = applications.filter(
-    (a) => (a.status || '').toLowerCase() === 'pending' || (a.status || '').toLowerCase() === 'correction required'
-  ).length;
 
   const filtered = applications.filter((app) => {
     const matchesSearch =
@@ -54,12 +66,20 @@ export function Applications() {
 
     let matchesStatus = true;
     const currentStatusLower = (app.status || '').toLowerCase();
-    if (filterStatus === 'Submitted' || filterStatus === 'Payment') {
-      matchesStatus = currentStatusLower === 'pending';
+    if (filterStatus === 'Submitted') {
+      matchesStatus = currentStatusLower === 'pending' || currentStatusLower === 'submitted';
+    } else if (filterStatus === 'Payment') {
+      const payStatus = (app.paymentDetails?.paymentStatus || app.paymentStatus || '').toLowerCase();
+      const hasReceipt = Boolean(app.paymentReceiptUrl || app.paymentDetails?.receiptUrl);
+      matchesStatus = (currentStatusLower === 'pending' || currentStatusLower === 'submitted') && (hasReceipt || payStatus === 'pending');
     } else if (filterStatus === 'PendingDocs') {
-      matchesStatus = currentStatusLower === 'correction required' || currentStatusLower === 'pending';
+      const isCorrection = currentStatusLower === 'correction required' || currentStatusLower === 'correction_required';
+      const hasMissingDocs = !app.idProofUrl || !app.photoUrl || !app.signatureUrl;
+      matchesStatus = isCorrection || (currentStatusLower === 'pending' && hasMissingDocs);
     } else if (filterStatus === 'Approved') {
       matchesStatus = currentStatusLower === 'approved';
+    } else if (filterStatus === 'Rejected') {
+      matchesStatus = currentStatusLower === 'rejected';
     } else if (filterStatus !== 'All') {
       matchesStatus = currentStatusLower === filterStatus.toLowerCase();
     }
@@ -445,118 +465,6 @@ export function Applications() {
 
   return (
     <div className="space-y-6 text-left animate-fade-in">
-      {/* QUICK ADD MEMBER BAR (Optional Expandable Top Banner) */}
-      <div className="bg-[#0b1c3d] text-white rounded-2xl border border-blue-900 shadow-md p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-lg bg-blue-600/30 text-blue-400">
-              <UserPlus className="w-4 h-4" />
-            </span>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black tracking-wider uppercase">QUICK ADD MEMBER BAR</span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-800 text-blue-200">
-                  ADMIN ACTION
-                </span>
-              </div>
-              <p className="text-[11px] text-blue-200/80 font-medium">
-                Instantly enroll a new member into the core ledger with allocated Core Member ID
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowQuickAdd(!showQuickAdd)}
-              className="text-xs font-bold text-blue-300 hover:text-white transition-colors cursor-pointer px-3 py-1 rounded-lg bg-white/10"
-            >
-              {showQuickAdd ? 'Hide Form' : 'Detailed Form'}
-            </button>
-          </div>
-        </div>
-
-        {showQuickAdd && (
-          <div className="pt-3 border-t border-blue-900/80 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3 items-end">
-            <div>
-              <label className="block text-[10px] font-extrabold uppercase text-blue-300 mb-1">
-                FULL LEGAL NAME *
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Suman Mohanty"
-                value={quickForm.name}
-                onChange={(e) => setQuickForm({ ...quickForm, name: e.target.value })}
-                className="w-full bg-slate-950/80 border border-blue-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-extrabold uppercase text-blue-300 mb-1">
-                EMAIL ADDRESS
-              </label>
-              <input
-                type="email"
-                placeholder="e.g. suman@gmail.com"
-                value={quickForm.email}
-                onChange={(e) => setQuickForm({ ...quickForm, email: e.target.value })}
-                className="w-full bg-slate-950/80 border border-blue-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-extrabold uppercase text-blue-300 mb-1">
-                MOBILE NUMBER
-              </label>
-              <input
-                type="text"
-                placeholder="+91 98610 xxxxx"
-                value={quickForm.mobile}
-                onChange={(e) => setQuickForm({ ...quickForm, mobile: e.target.value })}
-                className="w-full bg-slate-950/80 border border-blue-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-extrabold uppercase text-blue-300 mb-1">
-                HUB / CITY
-              </label>
-              <input
-                type="text"
-                placeholder="Bhubaneswar"
-                value={quickForm.city}
-                onChange={(e) => setQuickForm({ ...quickForm, city: e.target.value })}
-                className="w-full bg-slate-950/80 border border-blue-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-extrabold uppercase text-blue-300 mb-1">
-                INITIAL DEPOSIT
-              </label>
-              <input
-                type="text"
-                placeholder="25000"
-                value={quickForm.deposit}
-                onChange={(e) => setQuickForm({ ...quickForm, deposit: e.target.value })}
-                className="w-full bg-slate-950/80 border border-blue-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setQuickForm({ name: '', email: '', mobile: '', city: 'Bhubaneswar', deposit: '25000' })}
-                className="text-xs text-slate-400 hover:text-white px-2 py-1.5"
-              >
-                Clear
-              </button>
-              <button
-                type="button"
-                onClick={() => alert('Quick Member enrollment feature available via full 9-step registration or statutory import.')}
-                className="w-full bg-[#00C853] hover:bg-emerald-600 text-slate-950 font-extrabold text-xs py-2 px-3 rounded-xl transition-all shadow-sm cursor-pointer whitespace-nowrap"
-              >
-                + ADD MEMBER NOW
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* PAGE HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -584,49 +492,97 @@ export function Applications() {
         </button>
       </div>
 
-      {/* 5 SUMMARY STAT CARDS GRID */}
+      {/* 5 SUMMARY STAT CARDS GRID (CLICKABLE FILTERS) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
         {/* CARD 1: TOTAL APPLICATIONS */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs text-left space-y-1">
-          <span className="text-[10px] font-extrabold tracking-wider uppercase text-slate-400">
-            TOTAL APPLICATIONS
-          </span>
+        <div
+          onClick={() => setFilterStatus('All')}
+          className={`bg-white rounded-2xl border p-4 shadow-xs text-left space-y-1 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md ${
+            filterStatus === 'All' ? 'border-slate-400 ring-2 ring-slate-800 shadow-md bg-slate-50/50' : 'border-slate-200'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-extrabold tracking-wider uppercase text-slate-400">
+              TOTAL APPLICATIONS
+            </span>
+            {filterStatus === 'All' && <span className="w-2 h-2 rounded-full bg-slate-800 animate-pulse" />}
+          </div>
           <div className="text-2xl font-black text-slate-900 font-mono">{totalCount}</div>
           <p className="text-[11px] text-slate-400 font-medium">All recorded dossiers</p>
         </div>
 
         {/* CARD 2: SUBMITTED / REVIEW */}
-        <div className="bg-amber-50/40 rounded-2xl border border-amber-300 p-4 shadow-xs text-left space-y-1">
-          <span className="text-[10px] font-extrabold tracking-wider uppercase text-amber-700">
-            SUBMITTED / REVIEW
-          </span>
-          <div className="text-2xl font-black text-amber-800 font-mono">{pendingCount}</div>
+        <div
+          onClick={() => setFilterStatus('Submitted')}
+          className={`rounded-2xl border p-4 shadow-xs text-left space-y-1 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md ${
+            filterStatus === 'Submitted'
+              ? 'bg-amber-100/60 border-amber-400 ring-2 ring-amber-500 shadow-md'
+              : 'bg-amber-50/40 border-amber-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-extrabold tracking-wider uppercase text-amber-700">
+              SUBMITTED / REVIEW
+            </span>
+            {filterStatus === 'Submitted' && <span className="w-2 h-2 rounded-full bg-amber-600 animate-pulse" />}
+          </div>
+          <div className="text-2xl font-black text-amber-800 font-mono">{submittedCount}</div>
           <p className="text-[11px] text-amber-700 font-medium">Awaiting decision</p>
         </div>
 
         {/* CARD 3: PENDING KYC CHECK */}
-        <div className="bg-indigo-50/30 rounded-2xl border border-indigo-200 p-4 shadow-xs text-left space-y-1">
-          <span className="text-[10px] font-extrabold tracking-wider uppercase text-indigo-700">
-            PENDING KYC CHECK
-          </span>
-          <div className="text-2xl font-black text-indigo-900 font-mono">{pendingKycCount}</div>
+        <div
+          onClick={() => setFilterStatus('PendingDocs')}
+          className={`rounded-2xl border p-4 shadow-xs text-left space-y-1 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md ${
+            filterStatus === 'PendingDocs'
+              ? 'bg-indigo-100/60 border-indigo-400 ring-2 ring-indigo-500 shadow-md'
+              : 'bg-indigo-50/30 border-indigo-200'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-extrabold tracking-wider uppercase text-indigo-700">
+              PENDING KYC CHECK
+            </span>
+            {filterStatus === 'PendingDocs' && <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />}
+          </div>
+          <div className="text-2xl font-black text-indigo-900 font-mono">{pendingDocsCount}</div>
           <p className="text-[11px] text-indigo-600 font-medium">Unverified document cards</p>
         </div>
 
         {/* CARD 4: APPROVED MEMBERS */}
-        <div className="bg-emerald-50/30 rounded-2xl border border-emerald-300 p-4 shadow-xs text-left space-y-1">
-          <span className="text-[10px] font-extrabold tracking-wider uppercase text-emerald-700">
-            APPROVED MEMBERS
-          </span>
+        <div
+          onClick={() => setFilterStatus('Approved')}
+          className={`rounded-2xl border p-4 shadow-xs text-left space-y-1 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md ${
+            filterStatus === 'Approved'
+              ? 'bg-emerald-100/60 border-emerald-400 ring-2 ring-emerald-500 shadow-md'
+              : 'bg-emerald-50/30 border-emerald-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-extrabold tracking-wider uppercase text-emerald-700">
+              APPROVED MEMBERS
+            </span>
+            {filterStatus === 'Approved' && <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />}
+          </div>
           <div className="text-2xl font-black text-emerald-800 font-mono">{approvedCount}</div>
           <p className="text-[11px] text-emerald-700 font-medium">Allocated UF-2026 IDs</p>
         </div>
 
         {/* CARD 5: REJECTED */}
-        <div className="bg-rose-50/30 rounded-2xl border border-rose-200 p-4 shadow-xs text-left space-y-1">
-          <span className="text-[10px] font-extrabold tracking-wider uppercase text-rose-700">
-            REJECTED
-          </span>
+        <div
+          onClick={() => setFilterStatus('Rejected')}
+          className={`rounded-2xl border p-4 shadow-xs text-left space-y-1 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md ${
+            filterStatus === 'Rejected'
+              ? 'bg-rose-100/60 border-rose-400 ring-2 ring-rose-500 shadow-md'
+              : 'bg-rose-50/30 border-rose-200'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-extrabold tracking-wider uppercase text-rose-700">
+              REJECTED
+            </span>
+            {filterStatus === 'Rejected' && <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />}
+          </div>
           <div className="text-2xl font-black text-rose-800 font-mono">{rejectedCount}</div>
           <p className="text-[11px] text-rose-600 font-medium">With recorded grounds</p>
         </div>
@@ -662,8 +618,8 @@ export function Applications() {
               }`}
             >
               <span>Payment Verification</span>
-              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-mono bg-slate-200 text-slate-800">
-                {pendingCount}
+              <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono ${filterStatus === 'Payment' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-800'}`}>
+                {paymentVerificationCount}
               </span>
             </button>
 
@@ -677,8 +633,8 @@ export function Applications() {
               }`}
             >
               <span>New / Submitted</span>
-              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-mono bg-slate-200 text-slate-800">
-                {pendingCount}
+              <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono ${filterStatus === 'Submitted' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-800'}`}>
+                {submittedCount}
               </span>
             </button>
 
@@ -692,8 +648,8 @@ export function Applications() {
               }`}
             >
               <span>Pending Docs</span>
-              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-mono bg-slate-200 text-slate-800">
-                {pendingKycCount}
+              <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono ${filterStatus === 'PendingDocs' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-800'}`}>
+                {pendingDocsCount}
               </span>
             </button>
 
@@ -707,10 +663,27 @@ export function Applications() {
               }`}
             >
               <span>Approved Members</span>
-              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-mono bg-slate-200 text-slate-800">
+              <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono ${filterStatus === 'Approved' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-800'}`}>
                 {approvedCount}
               </span>
             </button>
+
+            {rejectedCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setFilterStatus('Rejected')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  filterStatus === 'Rejected'
+                    ? 'bg-[#0b1c3d] text-white shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                <span>Rejected</span>
+                <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono ${filterStatus === 'Rejected' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-800'}`}>
+                  {rejectedCount}
+                </span>
+              </button>
+            )}
           </div>
 
           {/* SEARCH & BRANCH SELECTOR */}

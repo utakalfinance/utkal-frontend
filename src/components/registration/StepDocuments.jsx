@@ -1,8 +1,9 @@
 import React, { useRef } from 'react';
 import { FormSection } from './FormSection';
 import { FormSelect } from './FormSelect';
+import { FormInput } from './FormInput';
 import { ID_PROOF_TYPES } from '../../data/registrationOptions';
-import { FileText, Upload, CheckCircle2, Trash2, AlertCircle } from 'lucide-react';
+import { FileText, Upload, CheckCircle2, Trash2, AlertCircle, Hash, CreditCard } from 'lucide-react';
 
 export function StepDocuments({ data = {}, errors = {}, onFileSelect, onFileRemove, onChange }) {
   const fileInputRefs = {
@@ -90,6 +91,51 @@ export function StepDocuments({ data = {}, errors = {}, onFileSelect, onFileRemo
     }
   };
 
+  const getIdNumberLabel = () => {
+    switch (data.idProofType) {
+      case 'Aadhaar Card':
+        return 'Aadhaar Card Number (12 Digits)';
+      case 'PAN Card':
+        return 'PAN Card Number (10 Alphanumeric)';
+      case 'Voter ID':
+        return 'Voter ID / EPIC Card Number';
+      case 'Passport':
+        return 'Passport Number';
+      case 'Driving Licence':
+        return 'Driving Licence Number';
+      default:
+        return `${data.idProofType || 'ID Proof'} Document Number`;
+    }
+  };
+
+  const getIdNumberPlaceholder = () => {
+    switch (data.idProofType) {
+      case 'Aadhaar Card':
+        return 'e.g. 1234 5678 9012';
+      case 'PAN Card':
+        return 'e.g. ABCDE1234F';
+      case 'Voter ID':
+        return 'e.g. ABC1234567';
+      case 'Passport':
+        return 'e.g. A1234567';
+      case 'Driving Licence':
+        return 'e.g. OD0220190012345';
+      default:
+        return 'Enter identification document number';
+    }
+  };
+
+  const handleIdNumberChange = (e) => {
+    let val = e.target.value;
+    if (data.idProofType === 'PAN Card') {
+      val = val.toUpperCase().slice(0, 10);
+    } else if (data.idProofType === 'Aadhaar Card') {
+      const clean = val.replace(/\D/g, '').slice(0, 12);
+      val = clean.replace(/(\d{4})(?=\d)/g, '$1 ');
+    }
+    onChange('idProofNumber', val);
+  };
+
   return (
     <FormSection
       title={
@@ -101,24 +147,27 @@ export function StepDocuments({ data = {}, errors = {}, onFileSelect, onFileRemo
       subtitle="Upload primary KYC documents and any supporting statutory attachments. All uploaded files are stored safely in MongoDB."
     >
       <div className="space-y-6">
-        {/* DOCUMENT TYPE SELECTORS */}
-        <div className="bg-slate-50/70 border border-slate-200/90 rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* DOCUMENT TYPE & DOCUMENT NUMBER SELECTORS */}
+        <div className="bg-slate-50/70 border border-slate-200/90 rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
           <FormSelect
             label="ID Proof Document Type"
             name="idProofType"
             value={data.idProofType || 'Aadhaar Card'}
-            onChange={(e) => onChange('idProofType', e.target.value)}
+            onChange={(e) => {
+              onChange('idProofType', e.target.value);
+            }}
             options={ID_PROOF_TYPES}
             error={errors.idProofType}
           />
 
-          <FormSelect
-            label="Address Proof Document Type"
-            name="addressProofType"
-            value={data.addressProofType || 'Aadhaar Card'}
-            onChange={(e) => onChange('addressProofType', e.target.value)}
-            options={['Aadhaar Card', 'Voter ID Card', 'Electricity Bill', 'Ration Card', 'Bank Statement', 'Passport']}
-            error={errors.addressProofType}
+          <FormInput
+            label={getIdNumberLabel()}
+            name="idProofNumber"
+            value={data.idProofNumber || ''}
+            onChange={handleIdNumberChange}
+            placeholder={getIdNumberPlaceholder()}
+            icon={Hash}
+            error={errors.idProofNumber}
           />
         </div>
 

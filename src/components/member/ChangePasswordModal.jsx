@@ -1,3 +1,12 @@
+import React, { useState } from 'react';
+import {
+  Lock,
+  X,
+  CheckCircle2,
+  ShieldCheck,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
 import { useMemberAuth } from '../../hooks/useMemberAuth';
 
 export function ChangePasswordModal({ isOpen, onClose }) {
