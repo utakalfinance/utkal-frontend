@@ -1,15 +1,29 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Outlet, Navigate, useLocation } from 'react-router-dom';
+import { Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Bell, X, ArrowRight } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import { AdminSidebar } from '../../components/admin/AdminSidebar';
 import { AdminHeader } from '../../components/admin/AdminHeader';
 import { AdminMobileMenu } from '../../components/admin/AdminMobileMenu';
 
 export function AdminDashboardLayout() {
-  const { isAuthenticated, refreshData } = useAdmin();
+  const { isAuthenticated, refreshData, newApplicationAlert, clearNewApplicationAlert } = useAdmin();
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mainContentRef = useRef(null);
+
+  // Auto-dismiss alert after 10 seconds
+  useEffect(() => {
+    if (newApplicationAlert) {
+      const timer = setTimeout(() => {
+        if (typeof clearNewApplicationAlert === 'function') {
+          clearNewApplicationAlert();
+        }
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [newApplicationAlert, clearNewApplicationAlert]);
 
   // Fetch fresh live data from database immediately on mounting and route changes
   useEffect(() => {
@@ -51,6 +65,57 @@ export function AdminDashboardLayout() {
           </div>
         </main>
       </div>
+
+      {/* REAL-TIME FLOATING APPLICATION ALERT TOAST */}
+      {newApplicationAlert && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-slate-900 text-white rounded-2xl shadow-2xl border border-amber-500/50 p-4 animate-slide-up flex flex-col gap-2.5">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 font-bold shadow-md">
+              <Bell className="w-5 h-5 animate-bounce" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">
+                  New Application Received
+                </span>
+                <button
+                  type="button"
+                  onClick={clearNewApplicationAlert}
+                  className="text-slate-400 hover:text-white p-0.5 rounded cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="font-extrabold text-sm text-white truncate mt-0.5">
+                {newApplicationAlert.applicantName}
+              </p>
+              <p className="text-[11px] text-slate-300 font-mono">
+                {newApplicationAlert.applicationId} • ₹{newApplicationAlert.amount} • {newApplicationAlert.time}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-800">
+            <button
+              type="button"
+              onClick={clearNewApplicationAlert}
+              className="px-2.5 py-1 text-[11px] text-slate-400 hover:text-slate-200 cursor-pointer"
+            >
+              Dismiss
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                navigate(`/admin-dashboard/applications/${newApplicationAlert.id}`);
+                clearNewApplicationAlert();
+              }}
+              className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black rounded-lg cursor-pointer flex items-center gap-1 shadow-xs"
+            >
+              <span>Review Now</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

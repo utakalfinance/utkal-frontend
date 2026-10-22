@@ -134,11 +134,11 @@ export function saveApplication(formData = {}) {
   const apps = getApplications();
   const currentUser = getCurrentUser();
 
-  const appId = generateApplicationId();
+  const appId = formData.applicationId || formData.id || generateApplicationId();
   const randomRefDigits = Math.floor(1000 + Math.random() * 9000);
-  const refId = `APP-2026-${randomRefDigits}`;
-  const memberId = `UF-2026-${Math.floor(6000 + Math.random() * 1000)}`;
-  const empId = `EMP-2026-${Math.floor(6000 + Math.random() * 1000)}`;
+  const refId = formData.refId || `APP-2026-${randomRefDigits}`;
+  const memberId = formData.memberId || `UF-2026-${Math.floor(6000 + Math.random() * 1000)}`;
+  const empId = formData.empId || `EMP-2026-${Math.floor(6000 + Math.random() * 1000)}`;
 
   const personal = formData.personal || {};
   const address = formData.address || {};
@@ -162,6 +162,7 @@ export function saveApplication(formData = {}) {
     .join(', ');
 
   const newApplication = {
+    _id: formData._id || appId,
     id: appId,
     applicationId: appId,
     refId,
@@ -343,6 +344,91 @@ export function updateApplicationRecord(id, updatedFields = {}) {
       const nameParts = [title, firstName, middleName, lastName].filter(Boolean);
       const applicantName = nameParts.length > 0 ? nameParts.join(' ') : (updatedFields.applicantName || app.applicantName);
 
+      const mergedDocuments = {
+        ...(app.documentDetails || {}),
+        ...(app.documents || {}),
+        ...(updatedFields.documentDetails || {}),
+        ...(updatedFields.documents || {}),
+      };
+
+      const idProofUrl =
+        updatedFields.idProofUrl ||
+        mergedDocuments.idProofUrl ||
+        mergedDocuments.idProof ||
+        mergedDocuments.doc2_govId ||
+        app.idProofUrl ||
+        '';
+
+      const addressProofUrl =
+        updatedFields.addressProofUrl ||
+        mergedDocuments.addressProofUrl ||
+        mergedDocuments.addressProof ||
+        app.addressProofUrl ||
+        '';
+
+      const photoUrl =
+        updatedFields.photoUrl ||
+        mergedDocuments.photoUrl ||
+        mergedDocuments.photo ||
+        mergedDocuments.doc1_photo ||
+        app.photoUrl ||
+        '';
+
+      const signatureUrl =
+        updatedFields.signatureUrl ||
+        mergedDocuments.signatureUrl ||
+        mergedDocuments.signature ||
+        app.signatureUrl ||
+        '';
+
+      const doc3_eduCert =
+        updatedFields.doc3_eduCert ||
+        mergedDocuments.doc3_eduCert ||
+        app.doc3_eduCert ||
+        '';
+
+      const doc4_birthCert =
+        updatedFields.doc4_birthCert ||
+        mergedDocuments.doc4_birthCert ||
+        app.doc4_birthCert ||
+        '';
+
+      const doc5_utility =
+        updatedFields.doc5_utility ||
+        mergedDocuments.doc5_utility ||
+        app.doc5_utility ||
+        '';
+
+      const paymentReceiptUrl =
+        updatedFields.paymentReceiptUrl ||
+        mergedDocuments.paymentReceiptUrl ||
+        app.paymentReceiptUrl ||
+        '';
+
+      const syncedDocDetails = {
+        ...mergedDocuments,
+        idProofType: mergedDocuments.idProofType || updatedFields.idProofType || app.idProofType || 'Aadhaar Card',
+        idProofUrl,
+        idProof: idProofUrl,
+        idProofFile: idProofUrl,
+        doc2_govId: idProofUrl,
+        addressProofType: mergedDocuments.addressProofType || updatedFields.addressProofType || app.addressProofType || 'Aadhaar Card',
+        addressProofUrl,
+        addressProof: addressProofUrl,
+        addressProofFile: addressProofUrl,
+        photoUrl,
+        photo: photoUrl,
+        photoFile: photoUrl,
+        doc1_photo: photoUrl,
+        signatureUrl,
+        signature: signatureUrl,
+        signatureFile: signatureUrl,
+        doc3_eduCert,
+        doc4_birthCert,
+        doc5_utility,
+        paymentReceiptUrl,
+      };
+
       updatedItem = {
         ...app,
         ...updatedFields,
@@ -351,6 +437,24 @@ export function updateApplicationRecord(id, updatedFields = {}) {
         addressDetails: mergedAddress,
         nomineeDetails: mergedNominee,
         membershipDetails: mergedMembership,
+        documentDetails: syncedDocDetails,
+        documents: syncedDocDetails,
+        idProofUrl,
+        idProof: idProofUrl,
+        doc2_govId: idProofUrl,
+        idProofType: syncedDocDetails.idProofType,
+        addressProofUrl,
+        addressProof: addressProofUrl,
+        addressProofType: syncedDocDetails.addressProofType,
+        photoUrl,
+        photo: photoUrl,
+        doc1_photo: photoUrl,
+        signatureUrl,
+        signature: signatureUrl,
+        doc3_eduCert,
+        doc4_birthCert,
+        doc5_utility,
+        paymentReceiptUrl,
         applicantName,
         title,
         firstName,

@@ -581,10 +581,14 @@ export function RegistrationWizard({ activeStep = 1, onQuickFillTrigger }) {
         const generatedAppId = data.application.applicationId;
         saveApplication({
           ...payload,
+          ...data.application,
           applicationId: generatedAppId,
         });
 
-        // Trigger live refresh for admin dashboard
+        // Trigger live refresh for admin dashboard across tabs and windows
+        try {
+          localStorage.setItem('admin_last_updated', Date.now().toString());
+        } catch (e) {}
         window.dispatchEvent(new Event('storage'));
 
         setReferenceNo(generatedAppId);

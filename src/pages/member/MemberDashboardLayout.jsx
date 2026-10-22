@@ -22,12 +22,17 @@ export function MemberDashboardLayout() {
 
   const mainContentRef = useRef(null);
 
-  // Redirect to login if unauthenticated
+  // Redirect to login if unauthenticated or rejected
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate('/member-login', { replace: true });
+    if (!isLoading) {
+      if (!isAuthenticated || application?.status === 'rejected' || (memberUser && memberUser.status !== 'active')) {
+        if (application?.status === 'rejected' || (memberUser && memberUser.status !== 'active')) {
+          logout();
+        }
+        navigate('/login', { replace: true });
+      }
     }
-  }, [isAuthenticated, isLoading, navigate]);
+  }, [isAuthenticated, isLoading, application, memberUser, logout, navigate]);
 
   // Scroll to top of main container when switching subpages
   useEffect(() => {
@@ -38,7 +43,7 @@ export function MemberDashboardLayout() {
 
   const handleLogout = () => {
     logout();
-    navigate('/member-login');
+    navigate('/login');
   };
 
   if (isLoading) {

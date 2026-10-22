@@ -24,15 +24,19 @@ import {
   Image as ImageIcon,
   Download,
   ExternalLink,
+  Loader2,
 } from 'lucide-react';
 import { getBackendAssetUrl } from '../../config/env';
+import { uploadDocumentsApi } from '../../services/applicationService';
 
 export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
   const [activeSection, setActiveSection] = useState('personal');
   const [isSaving, setIsSaving] = useState(false);
+  const [uploadingFields, setUploadingFields] = useState({});
   const [error, setError] = useState('');
   const [previewDoc, setPreviewDoc] = useState(null);
   const scrollContainerRef = useRef(null);
+  const lastLoadedAppIdRef = useRef(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -99,8 +103,22 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
     status: 'pending',
   });
 
-  // Load existing application data when modal opens or application changes
+  // Load existing application data ONLY when modal freshly opens or target application changes
   useEffect(() => {
+    if (!isOpen || !application) {
+      lastLoadedAppIdRef.current = null;
+      return;
+    }
+
+    const currentAppId = String(application._id || application.id || application.applicationId || '');
+
+    // Prevent background polling or window re-focus from overwriting active form edits while modal is open
+    if (lastLoadedAppIdRef.current === currentAppId) {
+      return;
+    }
+
+    lastLoadedAppIdRef.current = currentAppId;
+
     if (application) {
       const p = application.personalDetails || application.personal || {};
       const c = application.contactDetails || application.account || {};
@@ -294,7 +312,7 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
       setError('');
       setActiveSection('personal');
     }
-  }, [application]);
+  }, [isOpen, application]);
 
   // Ensure scroll resets to top whenever modal opens & lock body scrolling
   useEffect(() => {
@@ -330,15 +348,58 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
     });
   };
 
-  const handleFileUpload = (docField, file) => {
+  const handleFileUpload = async (docField, file) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (reader.result) {
-        handleChange(docField, reader.result);
+    setError('');
+    setUploadingFields((prev) => ({ ...prev, [docField]: true }));
+
+    // Create an immediate local preview
+    try {
+      const localPreviewUrl = URL.createObjectURL(file);
+      handleChange(docField, localPreviewUrl);
+    } catch (e) {}
+
+    try {
+      const fd = new FormData();
+      let slotName = docField;
+      if (docField === 'idProofUrl') slotName = 'idProof';
+      else if (docField === 'addressProofUrl') slotName = 'addressProof';
+      else if (docField === 'photoUrl') slotName = 'photo';
+      else if (docField === 'signatureUrl') slotName = 'signature';
+      else if (docField === 'paymentReceiptUrl') slotName = 'paymentReceipt';
+
+      fd.append(slotName, file);
+      if (slotName !== docField) {
+        fd.append(docField, file);
       }
-    };
-    reader.readAsDataURL(file);
+
+      const uploadedFiles = await uploadDocumentsApi(fd);
+      const serverUrl =
+        uploadedFiles[slotName] ||
+        uploadedFiles[docField] ||
+        (docField === 'idProofUrl' ? uploadedFiles.idProof || uploadedFiles.doc2_govId : '') ||
+        (docField === 'addressProofUrl' ? uploadedFiles.addressProof : '') ||
+        (docField === 'photoUrl' ? uploadedFiles.photo || uploadedFiles.doc1_photo : '') ||
+        (docField === 'signatureUrl' ? uploadedFiles.signature : '') ||
+        (docField === 'paymentReceiptUrl' ? uploadedFiles.paymentReceipt || uploadedFiles.receiptFile : '') ||
+        Object.values(uploadedFiles)[0];
+
+      if (serverUrl) {
+        handleChange(docField, serverUrl);
+      }
+    } catch (err) {
+      console.warn('Direct upload error, falling back to base64 DataURL:', err.message);
+      // Fallback: Read as base64 data URL if direct upload fails
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (reader.result) {
+          handleChange(docField, reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setUploadingFields((prev) => ({ ...prev, [docField]: false }));
+    }
   };
 
   const scrollToSection = (sectionId) => {
@@ -427,10 +488,20 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
       const documentPayload = {
         idProofType: formData.idProofType,
         idProofUrl: formData.idProofUrl,
+        idProof: formData.idProofUrl,
+        idProofFile: formData.idProofUrl,
+        doc2_govId: formData.idProofUrl,
         addressProofType: formData.addressProofType,
         addressProofUrl: formData.addressProofUrl,
+        addressProof: formData.addressProofUrl,
+        addressProofFile: formData.addressProofUrl,
         photoUrl: formData.photoUrl,
+        photo: formData.photoUrl,
+        photoFile: formData.photoUrl,
+        doc1_photo: formData.photoUrl,
         signatureUrl: formData.signatureUrl,
+        signature: formData.signatureUrl,
+        signatureFile: formData.signatureUrl,
         doc3_eduCert: formData.doc3_eduCert,
         doc4_birthCert: formData.doc4_birthCert,
         doc5_utility: formData.doc5_utility,
@@ -476,6 +547,24 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
         processingFee: Number(formData.processingFee),
         totalPaid: totalContribution,
         status: formData.status,
+
+        // Direct top-level synchronized document fields
+        idProofUrl: formData.idProofUrl,
+        idProof: formData.idProofUrl,
+        doc2_govId: formData.idProofUrl,
+        idProofType: formData.idProofType,
+        addressProofUrl: formData.addressProofUrl,
+        addressProof: formData.addressProofUrl,
+        addressProofType: formData.addressProofType,
+        photoUrl: formData.photoUrl,
+        photo: formData.photoUrl,
+        doc1_photo: formData.photoUrl,
+        signatureUrl: formData.signatureUrl,
+        signature: formData.signatureUrl,
+        doc3_eduCert: formData.doc3_eduCert,
+        doc4_birthCert: formData.doc4_birthCert,
+        doc5_utility: formData.doc5_utility,
+        paymentReceiptUrl: formData.paymentReceiptUrl,
 
         // Synchronized Document & Payment structures
         documentDetails: documentPayload,
@@ -545,6 +634,7 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
       };
 
       await onSave(application._id || application.id, payload);
+      lastLoadedAppIdRef.current = null;
       onClose();
     } catch (err) {
       console.error('Error saving application:', err);
@@ -558,6 +648,7 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
     const rawUrl = formData[urlKey];
     const fullUrl = rawUrl ? getBackendAssetUrl(rawUrl) : '';
     const hasDoc = Boolean(fullUrl);
+    const isUploading = Boolean(uploadingFields[urlKey]);
     const isPdf = typeof fullUrl === 'string' && (fullUrl.includes('.pdf') || fullUrl.startsWith('data:application/pdf'));
 
     return (
@@ -572,19 +663,21 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
                 {title}
               </span>
               <span className="text-[10px] text-slate-500 font-medium">
-                {hasDoc ? 'Document attached' : 'No document uploaded'}
+                {isUploading ? 'Uploading to server...' : hasDoc ? 'Document attached' : 'No document uploaded'}
               </span>
             </div>
           </div>
 
           <span
             className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border shrink-0 ${
-              hasDoc
+              isUploading
+                ? 'bg-blue-100 text-blue-700 border-blue-300 animate-pulse'
+                : hasDoc
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                 : 'bg-slate-200/70 text-slate-500 border-slate-300'
             }`}
           >
-            {hasDoc ? 'Uploaded' : 'Empty'}
+            {isUploading ? 'Uploading...' : hasDoc ? 'Uploaded' : 'Empty'}
           </span>
         </div>
 
@@ -610,7 +703,13 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
 
         {/* THUMBNAIL / PREVIEW BOX */}
         <div className="bg-white rounded-xl border border-slate-200/80 p-2.5 h-36 flex items-center justify-center overflow-hidden relative group">
-          {hasDoc ? (
+          {isUploading ? (
+            <div className="flex flex-col items-center justify-center text-center space-y-2 p-2">
+              <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+              <span className="text-[11px] font-bold text-blue-700">Uploading to server...</span>
+              <span className="text-[9px] text-slate-400">Saving file to storage</span>
+            </div>
+          ) : hasDoc ? (
             isPdf ? (
               <div className="flex flex-col items-center justify-center text-center space-y-1 p-2">
                 <FileText className="w-10 h-10 text-rose-500" />
@@ -631,7 +730,7 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
             </div>
           )}
 
-          {hasDoc && (
+          {hasDoc && !isUploading && (
             <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-2">
               <button
                 type="button"
@@ -657,26 +756,43 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
 
         {/* ACTION BUTTONS: UPLOAD / REPLACE & REMOVE */}
         <div className="flex items-center gap-2 pt-1">
-          <label className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs transition-colors cursor-pointer border border-blue-200">
-            <Upload className="w-3.5 h-3.5" />
-            <span>{hasDoc ? 'Replace File' : 'Upload File'}</span>
+          <label
+            className={`flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl font-bold text-xs transition-colors border ${
+              isUploading
+                ? 'bg-blue-100 text-blue-500 border-blue-200 cursor-not-allowed'
+                : 'bg-blue-50 hover:bg-blue-100 text-blue-700 cursor-pointer border-blue-200'
+            }`}
+          >
+            {isUploading ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Uploading...</span>
+              </>
+            ) : (
+              <>
+                <Upload className="w-3.5 h-3.5" />
+                <span>{hasDoc ? 'Replace File' : 'Upload File'}</span>
+              </>
+            )}
             <input
               type="file"
               accept="image/*,.pdf"
+              disabled={isUploading}
               className="hidden"
               onChange={(e) => {
                 if (e.target.files && e.target.files[0]) {
                   handleFileUpload(urlKey, e.target.files[0]);
                 }
+                e.target.value = '';
               }}
             />
           </label>
 
-          {hasDoc && (
+          {hasDoc && !isUploading && (
             <button
               type="button"
               onClick={() => handleChange(urlKey, '')}
-              className="p-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition-colors border border-slate-200"
+              className="p-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition-colors border border-slate-200 cursor-pointer"
               title="Remove document"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -687,11 +803,16 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
     );
   };
 
+  const handleClose = () => {
+    lastLoadedAppIdRef.current = null;
+    onClose();
+  };
+
   const modalContent = (
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-xs select-none"
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget) handleClose();
       }}
     >
       <div
@@ -721,7 +842,7 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors cursor-pointer"
             title="Close"
           >
@@ -1598,7 +1719,7 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
               <button
                 type="button"
                 disabled={isSaving}
-                onClick={onClose}
+                onClick={handleClose}
                 className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer disabled:opacity-50"
               >
                 Cancel
@@ -1606,13 +1727,18 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
 
               <button
                 type="submit"
-                disabled={isSaving}
+                disabled={isSaving || Object.values(uploadingFields).some(Boolean)}
                 className="px-6 py-2 rounded-xl bg-[#0b1c3d] hover:bg-blue-900 text-white font-black text-xs uppercase tracking-wider transition-all shadow-md cursor-pointer disabled:opacity-50 inline-flex items-center gap-2"
               >
                 {isSaving ? (
                   <>
                     <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                     <span>Saving Changes...</span>
+                  </>
+                ) : Object.values(uploadingFields).some(Boolean) ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                    <span>UPLOADING FILES...</span>
                   </>
                 ) : (
                   <>

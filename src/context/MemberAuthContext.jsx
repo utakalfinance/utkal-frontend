@@ -42,6 +42,12 @@ export function MemberAuthProvider({ children }) {
     try {
       const res = await getMemberProfileApi(activeToken);
       if (res && res.user) {
+        // If linked application was rejected or user account was deactivated, force immediate logout
+        if (res.application?.status === 'rejected' || res.user?.status !== 'active') {
+          logout();
+          return;
+        }
+
         setMemberUser(res.user);
         localStorage.setItem('utkal_member_user', JSON.stringify(res.user));
         if (res.member) {
@@ -60,6 +66,7 @@ export function MemberAuthProvider({ children }) {
       }
     } catch (err) {
       console.warn('Could not refresh member profile with token:', err.message);
+      logout();
     } finally {
       setIsLoading(false);
     }
@@ -73,6 +80,13 @@ export function MemberAuthProvider({ children }) {
     setIsLoading(true);
     try {
       const res = await memberLoginApi({ identifier, password });
+      
+      // If application is marked rejected or user inactive, block immediately
+      if (res.application?.status === 'rejected' || res.user?.status !== 'active') {
+        logout();
+        throw new Error('Your membership application has been rejected by the administrator. Access to the Member Dashboard is not permitted.');
+      }
+
       setToken(res.token);
       setMemberUser(res.user);
       setMemberDetails(res.member || null);
@@ -136,6 +150,8 @@ export function MemberAuthProvider({ children }) {
     return res;
   };
 
+  const isUserValid = !!token && !!memberUser && memberUser.status === 'active' && application?.status !== 'rejected';
+
   const value = {
     memberUser,
     memberDetails,
@@ -143,7 +159,7 @@ export function MemberAuthProvider({ children }) {
     payments,
     pendingUpdateRequest,
     token,
-    isAuthenticated: !!token && !!memberUser,
+    isAuthenticated: isUserValid,
     isLoading,
     login,
     logout,

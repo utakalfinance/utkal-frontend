@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   FileText,
@@ -20,8 +20,9 @@ import { useAdmin } from '../../context/AdminContext';
 import brandLogo from '../../assets/image copy 7.png';
 
 export function AdminMobileMenu({ isOpen, onClose }) {
-  const { logoutAdmin } = useAdmin();
+  const { logoutAdmin, unreadPendingAppsCount = 0, unreadNoticesCount = 0 } = useAdmin();
   const navigate = useNavigate();
+  const location = useLocation();
 
   if (!isOpen) return null;
 
@@ -31,15 +32,30 @@ export function AdminMobileMenu({ isOpen, onClose }) {
     navigate('/admin-login');
   };
 
+  const isApplicationsActive = location.pathname.startsWith('/admin-dashboard/applications');
+  const applicationsBadgeCount = isApplicationsActive ? null : (unreadPendingAppsCount > 0 ? unreadPendingAppsCount : null);
+
   const links = [
     { label: 'Dashboard', path: '/admin-dashboard', icon: LayoutDashboard },
-    { label: 'Applications Desk', path: '/admin-dashboard/applications', icon: FileText },
+    {
+      label: 'Applications Desk',
+      path: '/admin-dashboard/applications',
+      icon: FileText,
+      badge: applicationsBadgeCount,
+      badgeColor: 'bg-amber-500 text-white font-black'
+    },
     { label: 'Member Management', path: '/admin-dashboard/members', icon: Users },
     { label: 'Profile Update Requests', path: '/admin-dashboard/profile-updates', icon: UserCheck },
     { label: 'Documents & Audit', path: '/admin-dashboard/documents', icon: FolderCheck },
     { label: 'Deposit Management', path: '/admin-dashboard/deposits', icon: PiggyBank },
     { label: 'Payments', path: '/admin-dashboard/payments', icon: CreditCard },
-    { label: 'Notices & Circulars', path: '/admin-dashboard/notices', icon: Bell },
+    {
+      label: 'Notices & Circulars',
+      path: '/admin-dashboard/notices',
+      icon: Bell,
+      badge: unreadNoticesCount > 0 ? unreadNoticesCount : null,
+      badgeColor: 'bg-blue-500 text-white font-black'
+    },
     { label: 'Gallery Management', path: '/admin-dashboard/gallery', icon: ImageIcon },
     { label: 'Company Brochure', path: '/brochure', icon: BookOpen },
     { label: 'Admin Profile & Settings', path: '/admin-dashboard/profile', icon: User },
@@ -48,8 +64,8 @@ export function AdminMobileMenu({ isOpen, onClose }) {
   return (
     <div className="fixed inset-0 z-50 lg:hidden flex">
       {/* Dark transparent backdrop overlay */}
-      <div 
-        className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity" 
+      <div
+        className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -57,7 +73,7 @@ export function AdminMobileMenu({ isOpen, onClose }) {
       {/* Slide-in drawer container */}
       <div className="relative w-80 max-w-[85vw] bg-[#0B1528] text-white h-full flex flex-col z-10 shadow-2xl animate-fade-in border-r border-slate-800">
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-          <div 
+          <div
             onClick={() => { navigate('/'); onClose(); }}
             className="flex items-center gap-2.5 cursor-pointer"
           >
@@ -92,15 +108,29 @@ export function AdminMobileMenu({ isOpen, onClose }) {
                 end={item.path === '/admin-dashboard'}
                 onClick={onClose}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-bold transition-all ${
-                    isActive
-                      ? 'bg-[#004085] text-white shadow-md border border-blue-500/30'
-                      : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                  `flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all ${isActive
+                    ? 'bg-[#004085] text-white shadow-md border border-blue-500/30'
+                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                   }`
                 }
               >
-                <Icon className="w-4 h-4 text-slate-300 shrink-0" />
-                <span>{item.label}</span>
+                <div className="flex items-center gap-3 min-w-0">
+                  <Icon className="w-4 h-4 text-slate-300 shrink-0" />
+                  <span className="truncate">{item.label}</span>
+                </div>
+                {item.badge && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {item.hasPulse && (
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                      </span>
+                    )}
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${item.badgeColor} shadow-xs`}>
+                      {item.badge}
+                    </span>
+                  </div>
+                )}
               </NavLink>
             );
           })}

@@ -1,52 +1,10 @@
 import React from 'react';
-import { useOutletContext } from 'react-router-dom';
-import { ArrowRight, FileText, ShieldCheck, Users } from 'lucide-react';
+import { FileText, ShieldCheck, Users } from 'lucide-react';
 import { SectionHeading } from '../SectionHeading';
-import photo5 from '../../assets/image copy 4.png';
 
-export function CommunitySection({ onApplyNow }) {
-  const context = useOutletContext();
-  const handleApply = onApplyNow || (context && context.openApplyModal);
-
+export function CommunitySection() {
   return (
     <>
-      {/* PHOTO FEATURE SECTION (PHOTO 5) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 shadow-2xl bg-slate-950">
-          <img
-            src={photo5}
-            alt="Growing Together With Our Community"
-            className="w-full h-96 sm:h-[460px] object-cover object-center opacity-70 transform hover:scale-102 transition-transform duration-700"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent flex flex-col justify-end p-8 sm:p-12 lg:p-16">
-            <div className="max-w-2xl text-white space-y-4">
-              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 uppercase tracking-widest">
-                COMMUNITY ENGAGEMENT
-              </span>
-
-              <h3 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight">
-                Growing Together With Our Community
-              </h3>
-
-              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-normal">
-                Our associate members form the heart of New Utkal Finance. We remain committed to transparent financial inclusion, ethical rate structures, and continuous support for local prosperity across Odisha.
-              </p>
-
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={() => handleApply && handleApply()}
-                  className="bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs sm:text-sm px-6 py-3.5 rounded-xl shadow-lg shadow-blue-600/30 transition-all duration-200 inline-flex items-center gap-2 uppercase tracking-wider"
-                >
-                  <span>Become a Member</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* COMMUNITY / TRUST SECTION */}
       <section className="bg-slate-100/80 py-16 sm:py-20 border-y border-slate-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-4xl space-y-8">

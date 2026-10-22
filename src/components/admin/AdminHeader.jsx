@@ -1,71 +1,82 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Bell, Menu, LogOut, ChevronDown, ShieldCheck, CheckCircle2, X, Users, CreditCard, FileText, ArrowRight } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 
 import brandLogo from '../../assets/image copy 7.png';
 
 export function AdminHeader({ onToggleMobileMenu }) {
-  const { 
-    adminUser, 
-    logoutAdmin, 
-    applications = [], 
-    members = [], 
-    payments = [], 
-    unreadPendingAppsCount = 0, 
-    markAllApplicationsAsSeen, 
-    markApplicationAsSeen 
+  const {
+    adminUser,
+    logoutAdmin,
+    applications = [],
+    members = [],
+    payments = [],
+    pendingAppsCount = 0,
+    unreadPendingAppsCount = 0,
+    unreadNoticesCount = 0,
+    markAllApplicationsAsSeen,
+    markApplicationAsSeen
   } = useAdmin();
   const navigate = useNavigate();
+  const location = useLocation();
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
 
   const dropdownRef = useRef(null);
+  const notificationRef = useRef(null);
   const searchRef = useRef(null);
 
-  const pendingCount = unreadPendingAppsCount;
+  const isApplicationsActive = location.pathname.startsWith('/admin-dashboard/applications');
+  const activeUnreadCount = isApplicationsActive ? 0 : unreadPendingAppsCount;
+  const totalNotifications = activeUnreadCount + (isApplicationsActive ? 0 : unreadNoticesCount);
+  const pendingApplications = applications.filter((a) => {
+    const s = (a.status || '').toLowerCase();
+    return s === 'pending' || s === 'submitted' || s === 'payment';
+  });
 
   // Realtime multi-entity search filtering
   const trimmedQuery = searchQuery.trim().toLowerCase();
 
   const matchingApps = trimmedQuery
     ? applications
-        .filter((a) => {
-          return (
-            (a.applicantName || '').toLowerCase().includes(trimmedQuery) ||
-            (a.id || '').toLowerCase().includes(trimmedQuery) ||
-            (a.applicationId || '').toLowerCase().includes(trimmedQuery) ||
-            (a.mobile || '').includes(trimmedQuery) ||
-            (a.email || '').toLowerCase().includes(trimmedQuery)
-          );
-        })
-        .slice(0, 4)
+      .filter((a) => {
+        return (
+          (a.applicantName || '').toLowerCase().includes(trimmedQuery) ||
+          (a.id || '').toLowerCase().includes(trimmedQuery) ||
+          (a.applicationId || '').toLowerCase().includes(trimmedQuery) ||
+          (a.mobile || '').includes(trimmedQuery) ||
+          (a.email || '').toLowerCase().includes(trimmedQuery)
+        );
+      })
+      .slice(0, 4)
     : [];
 
   const matchingMembers = trimmedQuery
     ? members
-        .filter((m) => {
-          return (
-            (m.fullName || m.applicantName || m.name || '').toLowerCase().includes(trimmedQuery) ||
-            (m.memberId || m.id || '').toLowerCase().includes(trimmedQuery) ||
-            (m.mobile || '').includes(trimmedQuery) ||
-            (m.email || '').toLowerCase().includes(trimmedQuery)
-          );
-        })
-        .slice(0, 3)
+      .filter((m) => {
+        return (
+          (m.fullName || m.applicantName || m.name || '').toLowerCase().includes(trimmedQuery) ||
+          (m.memberId || m.id || '').toLowerCase().includes(trimmedQuery) ||
+          (m.mobile || '').includes(trimmedQuery) ||
+          (m.email || '').toLowerCase().includes(trimmedQuery)
+        );
+      })
+      .slice(0, 3)
     : [];
 
   const matchingPayments = trimmedQuery
     ? payments
-        .filter((p) => {
-          return (
-            (p.utrNumber || p.utr || '').toLowerCase().includes(trimmedQuery) ||
-            (p.applicantName || p.memberName || '').toLowerCase().includes(trimmedQuery) ||
-            (p.id || '').toLowerCase().includes(trimmedQuery)
-          );
-        })
-        .slice(0, 3)
+      .filter((p) => {
+        return (
+          (p.utrNumber || p.utr || '').toLowerCase().includes(trimmedQuery) ||
+          (p.applicantName || p.memberName || '').toLowerCase().includes(trimmedQuery) ||
+          (p.id || '').toLowerCase().includes(trimmedQuery)
+        );
+      })
+      .slice(0, 3)
     : [];
 
   const hasSearchResults = matchingApps.length > 0 || matchingMembers.length > 0 || matchingPayments.length > 0;
@@ -74,6 +85,9 @@ export function AdminHeader({ onToggleMobileMenu }) {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setUserDropdownOpen(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setNotificationDropdownOpen(false);
       }
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setSearchFocused(false);
@@ -118,8 +132,8 @@ export function AdminHeader({ onToggleMobileMenu }) {
           </button>
 
           {/* MOBILE BRAND LOGO (Shown only on small screens) */}
-          <div 
-            onClick={() => navigate('/')} 
+          <div
+            onClick={() => navigate('/')}
             className="lg:hidden flex items-center gap-2 cursor-pointer min-w-0"
           >
             <div className="w-7 h-7 rounded-lg bg-slate-900 p-0.5 border border-slate-700 shrink-0">
@@ -295,20 +309,107 @@ export function AdminHeader({ onToggleMobileMenu }) {
 
         {/* RIGHT: NOTIFICATION & ADMIN USER PROFILE DROPDOWN */}
         <div className="flex items-center gap-3">
-          {/* NOTIFICATION BUTTON - NAVIGATE TO NOTICES PAGE */}
-          <button
-            type="button"
-            onClick={() => navigate('/admin-dashboard/notices')}
-            className="relative p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors border border-slate-200/80 cursor-pointer"
-            title="Notices & Circulars"
-          >
-            <Bell className="w-4 h-4" />
-            {pendingCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] font-black flex items-center justify-center border-2 border-white">
-                {pendingCount}
-              </span>
+          {/* NOTIFICATION BUTTON WITH DROPDOWN */}
+          <div className="relative" ref={notificationRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setNotificationDropdownOpen(!notificationDropdownOpen);
+                setUserDropdownOpen(false);
+              }}
+              className="relative p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors border border-slate-200/80 cursor-pointer"
+              title={totalNotifications > 0 ? `${totalNotifications} Pending Application(s)` : 'Notifications'}
+              aria-label="View notifications"
+            >
+              <Bell className="w-4 h-4" />
+              {totalNotifications > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] font-black flex items-center justify-center border-2 border-white shadow-xs">
+                  {totalNotifications > 99 ? '99+' : totalNotifications}
+                </span>
+              )}
+            </button>
+
+            {/* LIVE NOTIFICATIONS DROPDOWN PANEL */}
+            {notificationDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-80 sm:w-96 max-w-[calc(100vw-2rem)] bg-white rounded-2xl border border-slate-200 shadow-2xl py-2.5 z-50 text-left animate-fade-in divide-y divide-slate-100">
+                <div className="px-4 py-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-xs text-slate-900">Notifications</span>
+                    {totalNotifications > 0 && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white">
+                        {totalNotifications} Pending
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNotificationDropdownOpen(false);
+                      navigate('/admin-dashboard/applications');
+                    }}
+                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
+                  >
+                    View All
+                  </button>
+                </div>
+
+                <div className="max-h-80 overflow-y-auto divide-y divide-slate-50">
+                  {pendingApplications.length > 0 ? (
+                    pendingApplications.slice(0, 6).map((app) => (
+                      <div
+                        key={app._id || app.id}
+                        onClick={() => {
+                          setNotificationDropdownOpen(false);
+                          navigate(`/admin-dashboard/applications/${app._id || app.id}`);
+                        }}
+                        className="p-3 hover:bg-blue-50/70 transition-colors cursor-pointer flex items-start gap-3 group"
+                      >
+                        <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 font-bold text-xs mt-0.5">
+                          <FileText className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-extrabold text-xs text-slate-900 group-hover:text-blue-700 truncate">
+                              {app.applicantName}
+                            </span>
+                            <span className="text-[10px] font-bold font-mono text-amber-600 shrink-0">
+                              ₹{app.totalPaid || 200}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-500 font-mono truncate">
+                            {app.id || app.applicationId} • {app.mobile}
+                          </div>
+                          <div className="text-[10px] text-slate-400 mt-0.5 flex items-center justify-between">
+                            <span>Status: Pending Review</span>
+                            <span className="text-blue-600 font-bold group-hover:underline">Review →</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-6 text-center space-y-1">
+                      <p className="text-xs font-bold text-slate-700">No pending notifications</p>
+                      <p className="text-[11px] text-slate-400">All member applications have been reviewed.</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="px-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNotificationDropdownOpen(false);
+                      navigate('/admin-dashboard/applications');
+                    }}
+                    className="w-full py-2 px-3 text-center rounded-xl bg-slate-100 hover:bg-blue-50 text-xs font-bold text-slate-700 hover:text-blue-700 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>Open Applications Desk</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
             )}
-          </button>
+          </div>
 
           {/* ADMIN USER PROFILE DROPDOWN */}
           <div className="relative" ref={dropdownRef}>

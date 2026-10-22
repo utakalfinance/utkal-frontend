@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { playNotificationSound } from '../utils/sound';
 import {
   getApplications,
   getMembers,
@@ -333,26 +334,108 @@ export const AdminProvider = ({ children }) => {
   const [seenApplicationIds, setSeenApplicationIds] = useState(() => {
     try {
       const saved = localStorage.getItem('admin_seen_application_ids');
-      return saved ? JSON.parse(saved) : [];
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          // Keep NUF-1035 unread so recently submitted user application shows notification
+          return parsed.filter(
+            (id) => id !== 'NUF-1035' && id !== '6acdc36075a70ae63beb0a27'
+          );
+        }
+      }
+      return [];
     } catch (e) {
       return [];
     }
   });
 
-  const markAllApplicationsAsSeen = useCallback(() => {
-    const allPendingIds = [];
-    applications.forEach((a) => {
-      const s = (a.status || '').toLowerCase();
-      if (s === 'pending' || s === 'submitted' || s === 'correction required' || s === 'correction_required') {
-        if (a._id) allPendingIds.push(String(a._id));
-        if (a.id) allPendingIds.push(String(a.id));
-        if (a.applicationId) allPendingIds.push(String(a.applicationId));
+  const [newApplicationAlert, setNewApplicationAlert] = useState(null);
+  const prevAppIdsRef = useRef(null);
+
+  // Seed baseline application IDs on first run ONLY for pre-existing historical records (before NUF-1035)
+  useEffect(() => {
+    try {
+      const isInitialized = localStorage.getItem('admin_seen_apps_seeded_v3');
+      if (!isInitialized && applications.length > 0) {
+        const historicalIds = [];
+        applications.forEach((a) => {
+          // Do NOT mark NUF-1035 as seen - it is a brand new application submitted by user!
+          if (
+            a.applicationId === 'NUF-1035' ||
+            a._id === '6acdc36075a70ae63beb0a27' ||
+            a.id === 'NUF-1035'
+          ) {
+            return;
+          }
+          if (a._id) historicalIds.push(String(a._id));
+          if (a.id) historicalIds.push(String(a.id));
+          if (a.applicationId) historicalIds.push(String(a.applicationId));
+        });
+        const uniqueIds = Array.from(new Set(historicalIds));
+        setSeenApplicationIds(uniqueIds);
+        localStorage.setItem('admin_seen_application_ids', JSON.stringify(uniqueIds));
+        localStorage.setItem('admin_seen_apps_seeded_v3', 'true');
       }
+    } catch (e) {}
+  }, [applications]);
+
+  const clearNewApplicationAlert = useCallback(() => {
+    setNewApplicationAlert(null);
+  }, []);
+
+  // Detect newly submitted applications in real time and trigger notification
+  useEffect(() => {
+    if (!applications || applications.length === 0) return;
+
+    const currentIds = new Set(
+      applications.map((a) => String(a._id || a.id || a.applicationId))
+    );
+
+    // Initial mount - record baseline IDs without firing toast
+    if (prevAppIdsRef.current === null) {
+      prevAppIdsRef.current = currentIds;
+      return;
+    }
+
+    // Check for newly added applications
+    const newlyAdded = applications.filter((a) => {
+      const id = String(a._id || a.id || a.applicationId);
+      return !prevAppIdsRef.current.has(id);
+    });
+
+    if (newlyAdded.length > 0) {
+      const latest = newlyAdded[0];
+      const s = (latest.status || '').toLowerCase();
+      if (s === 'pending' || s === 'submitted' || !s) {
+        setNewApplicationAlert({
+          id: latest._id || latest.id || latest.applicationId,
+          applicationId: latest.applicationId || latest.id,
+          applicantName: latest.applicantName || 'New Applicant',
+          mobile: latest.mobile || '',
+          email: latest.email || '',
+          amount: latest.totalPaid || latest.paymentDetails?.amount || 200,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        });
+
+        // Play gentle audio chime
+        playNotificationSound();
+      }
+    }
+
+    prevAppIdsRef.current = currentIds;
+  }, [applications]);
+
+  const markAllApplicationsAsSeen = useCallback(() => {
+    const allIds = [];
+    applications.forEach((a) => {
+      if (a._id) allIds.push(String(a._id));
+      if (a.id) allIds.push(String(a.id));
+      if (a.applicationId) allIds.push(String(a.applicationId));
     });
 
     setSeenApplicationIds((prev) => {
       const prevStrings = prev.map(String);
-      const combined = Array.from(new Set([...prevStrings, ...allPendingIds]));
+      const combined = Array.from(new Set([...prevStrings, ...allIds]));
       try {
         localStorage.setItem('admin_seen_application_ids', JSON.stringify(combined));
       } catch (e) { }
@@ -373,9 +456,15 @@ export const AdminProvider = ({ children }) => {
     });
   }, []);
 
+  const pendingAppsCount = applications.filter((a) => {
+    const s = (a.status || '').toLowerCase();
+    return s === 'pending' || s === 'submitted' || s === 'payment' || s === 'correction required' || s === 'correction_required' || s === 'under review' || s === 'under_review';
+  }).length;
+
+  // Counts strictly genuine newly submitted applications that haven't been opened by admin yet
   const unreadPendingAppsCount = applications.filter((a) => {
     const s = (a.status || '').toLowerCase();
-    const isPending = s === 'pending' || s === 'submitted' || s === 'correction required' || s === 'correction_required';
+    const isPending = s === 'pending' || s === 'submitted' || !s;
     if (!isPending) return false;
 
     const ids = [a._id, a.id, a.applicationId].filter(Boolean).map(String);
@@ -501,14 +590,24 @@ export const AdminProvider = ({ children }) => {
     const handleStorageChange = () => {
       refreshData();
       setIsAuthenticated(isAdminAuthenticated());
+      try {
+        const saved = localStorage.getItem('admin_seen_application_ids');
+        if (saved) setSeenApplicationIds(JSON.parse(saved));
+      } catch (e) {}
     };
 
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('focus', refreshData);
 
+    // Auto poll backend every 5 seconds for new application submissions
+    const pollInterval = setInterval(() => {
+      refreshData();
+    }, 5000);
+
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('focus', refreshData);
+      clearInterval(pollInterval);
     };
   }, [refreshData]);
 
@@ -815,7 +914,10 @@ export const AdminProvider = ({ children }) => {
         addTeamMember,
         updateTeamMember,
         deleteTeamMember,
+        newApplicationAlert,
+        clearNewApplicationAlert,
         seenApplicationIds,
+        pendingAppsCount,
         unreadPendingAppsCount,
         markAllApplicationsAsSeen,
         markApplicationAsSeen,

@@ -20,12 +20,12 @@ import { useAdmin } from '../../context/AdminContext';
 import brandLogo from '../../assets/image copy 7.png';
 
 export function AdminSidebar() {
-  const { 
-    logoutAdmin, 
-    unreadPendingAppsCount = 0, 
+  const {
+    logoutAdmin,
+    unreadPendingAppsCount = 0,
     markAllApplicationsAsSeen,
     unreadNoticesCount = 0,
-    markAllNoticesAsSeen 
+    markAllNoticesAsSeen
   } = useAdmin();
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,10 +35,12 @@ export function AdminSidebar() {
   const isApplicationsActive = location.pathname.startsWith('/admin-dashboard/applications');
   const isNoticesActive = location.pathname.startsWith('/admin-dashboard/notices');
 
-  const pendingApps = isApplicationsActive ? 0 : unreadPendingAppsCount;
-  const activeNotices = isNoticesActive ? 0 : unreadNoticesCount;
+  // ONLY show notification count for real new user applications
+  // And after moving to applications, that notification is not showing
+  const applicationsBadgeCount = isApplicationsActive ? null : (unreadPendingAppsCount > 0 ? unreadPendingAppsCount : null);
+  const activeNotices = isNoticesActive ? null : (unreadNoticesCount > 0 ? unreadNoticesCount : null);
 
-  // Clear unread badges when currently viewing the respective pages
+  // Clear unread notification when moving to applications or notices
   useEffect(() => {
     if (isApplicationsActive && typeof markAllApplicationsAsSeen === 'function') {
       markAllApplicationsAsSeen();
@@ -77,7 +79,13 @@ export function AdminSidebar() {
       title: 'CORE PORTAL',
       items: [
         { label: 'Dashboard', path: '/admin-dashboard', icon: LayoutDashboard },
-        { label: 'Applications', path: '/admin-dashboard/applications', icon: FileText, badge: pendingApps > 0 ? pendingApps : null, badgeColor: 'bg-amber-500 text-slate-950' },
+        {
+          label: 'Applications',
+          path: '/admin-dashboard/applications',
+          icon: FileText,
+          badge: applicationsBadgeCount,
+          badgeColor: 'bg-amber-500 text-white font-black'
+        },
         { label: 'Members', path: '/admin-dashboard/members', icon: Users },
         { label: 'Profile Updates', path: '/admin-dashboard/profile-updates', icon: UserCheck },
         { label: 'Documents', path: '/admin-dashboard/documents', icon: FolderCheck },
@@ -110,7 +118,7 @@ export function AdminSidebar() {
     <aside className="w-full bg-[#0B1528] text-white flex flex-col h-full border-r border-slate-800/80 select-none overflow-hidden">
       {/* BRANDING HEADER - STICKY TOP & NON-SHRINKING */}
       <div className="p-3.5 sm:p-4 border-b border-slate-800/90 flex items-center gap-3 shrink-0 bg-[#0B1528] z-10">
-        <div 
+        <div
           onClick={() => navigate('/')}
           className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-700 p-1 flex items-center justify-center shrink-0 cursor-pointer shadow-md hover:border-blue-500 transition-colors"
           title="Go to Website Home"
@@ -119,7 +127,7 @@ export function AdminSidebar() {
         </div>
 
         <div className="space-y-0.5 min-w-0">
-          <h1 
+          <h1
             onClick={() => navigate('/')}
             className="text-xs font-black tracking-tight text-white cursor-pointer leading-tight flex items-center gap-1 truncate hover:text-blue-300 transition-colors"
           >
@@ -149,10 +157,9 @@ export function AdminSidebar() {
                     to={item.path}
                     end={item.path === '/admin-dashboard'}
                     className={({ isActive }) =>
-                      `flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                        isActive
-                          ? 'bg-[#004085] text-white shadow-md border border-blue-400/30'
-                          : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                      `flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition-all ${isActive
+                        ? 'bg-[#004085] text-white shadow-md border border-blue-400/30'
+                        : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                       }`
                     }
                   >
@@ -163,9 +170,11 @@ export function AdminSidebar() {
                           <span className="truncate">{item.label}</span>
                         </div>
                         {item.badge ? (
-                          <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-extrabold ${item.badgeColor} shrink-0`}>
-                            {item.badge}
-                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black ${item.badgeColor} shadow-xs min-w-[18px] text-center`}>
+                              {item.badge}
+                            </span>
+                          </div>
                         ) : (
                           isActive && <ChevronRight className="w-3.5 h-3.5 text-blue-300 shrink-0 opacity-80" />
                         )}
@@ -196,5 +205,4 @@ export function AdminSidebar() {
     </aside>
   );
 }
-
 export default AdminSidebar;

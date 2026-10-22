@@ -37,7 +37,7 @@ export function Applications() {
     return s === 'pending' || s === 'submitted';
   }).length;
   const pendingCount = submittedCount;
-  
+
   const paymentVerificationCount = applications.filter((a) => {
     const s = (a.status || '').toLowerCase();
     const isPending = s === 'pending' || s === 'submitted';
@@ -312,7 +312,7 @@ export function Applications() {
         if (!isNaN(d.getTime())) {
           return d.toISOString().split('T')[0];
         }
-      } catch (e) {}
+      } catch (e) { }
       return String(val);
     };
 
@@ -497,9 +497,8 @@ export function Applications() {
         {/* CARD 1: TOTAL APPLICATIONS */}
         <div
           onClick={() => setFilterStatus('All')}
-          className={`bg-white rounded-2xl border p-4 shadow-xs text-left space-y-1 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md ${
-            filterStatus === 'All' ? 'border-slate-400 ring-2 ring-slate-800 shadow-md bg-slate-50/50' : 'border-slate-200'
-          }`}
+          className={`bg-white rounded-2xl border p-4 shadow-xs text-left space-y-1 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md ${filterStatus === 'All' ? 'border-slate-400 ring-2 ring-slate-800 shadow-md bg-slate-50/50' : 'border-slate-200'
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-extrabold tracking-wider uppercase text-slate-400">
@@ -514,11 +513,10 @@ export function Applications() {
         {/* CARD 2: SUBMITTED / REVIEW */}
         <div
           onClick={() => setFilterStatus('Submitted')}
-          className={`rounded-2xl border p-4 shadow-xs text-left space-y-1 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md ${
-            filterStatus === 'Submitted'
+          className={`rounded-2xl border p-4 shadow-xs text-left space-y-1 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md ${filterStatus === 'Submitted'
               ? 'bg-amber-100/60 border-amber-400 ring-2 ring-amber-500 shadow-md'
               : 'bg-amber-50/40 border-amber-300'
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-extrabold tracking-wider uppercase text-amber-700">
@@ -533,11 +531,10 @@ export function Applications() {
         {/* CARD 3: PENDING KYC CHECK */}
         <div
           onClick={() => setFilterStatus('PendingDocs')}
-          className={`rounded-2xl border p-4 shadow-xs text-left space-y-1 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md ${
-            filterStatus === 'PendingDocs'
+          className={`rounded-2xl border p-4 shadow-xs text-left space-y-1 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md ${filterStatus === 'PendingDocs'
               ? 'bg-indigo-100/60 border-indigo-400 ring-2 ring-indigo-500 shadow-md'
               : 'bg-indigo-50/30 border-indigo-200'
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-extrabold tracking-wider uppercase text-indigo-700">
@@ -552,11 +549,10 @@ export function Applications() {
         {/* CARD 4: APPROVED MEMBERS */}
         <div
           onClick={() => setFilterStatus('Approved')}
-          className={`rounded-2xl border p-4 shadow-xs text-left space-y-1 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md ${
-            filterStatus === 'Approved'
+          className={`rounded-2xl border p-4 shadow-xs text-left space-y-1 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md ${filterStatus === 'Approved'
               ? 'bg-emerald-100/60 border-emerald-400 ring-2 ring-emerald-500 shadow-md'
               : 'bg-emerald-50/30 border-emerald-300'
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-extrabold tracking-wider uppercase text-emerald-700">
@@ -571,11 +567,10 @@ export function Applications() {
         {/* CARD 5: REJECTED */}
         <div
           onClick={() => setFilterStatus('Rejected')}
-          className={`rounded-2xl border p-4 shadow-xs text-left space-y-1 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md ${
-            filterStatus === 'Rejected'
+          className={`rounded-2xl border p-4 shadow-xs text-left space-y-1 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md ${filterStatus === 'Rejected'
               ? 'bg-rose-100/60 border-rose-400 ring-2 ring-rose-500 shadow-md'
               : 'bg-rose-50/30 border-rose-200'
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-extrabold tracking-wider uppercase text-rose-700">
@@ -596,11 +591,10 @@ export function Applications() {
             <button
               type="button"
               onClick={() => setFilterStatus('All')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                filterStatus === 'All'
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${filterStatus === 'All'
                   ? 'bg-[#0b1c3d] text-white shadow-xs'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-              }`}
+                }`}
             >
               <span>All Applications</span>
               <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono ${filterStatus === 'All' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-800'}`}>
@@ -611,11 +605,10 @@ export function Applications() {
             <button
               type="button"
               onClick={() => setFilterStatus('Payment')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                filterStatus === 'Payment'
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${filterStatus === 'Payment'
                   ? 'bg-[#0b1c3d] text-white shadow-xs'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-              }`}
+                }`}
             >
               <span>Payment Verification</span>
               <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono ${filterStatus === 'Payment' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-800'}`}>
@@ -626,11 +619,10 @@ export function Applications() {
             <button
               type="button"
               onClick={() => setFilterStatus('Submitted')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                filterStatus === 'Submitted'
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${filterStatus === 'Submitted'
                   ? 'bg-[#0b1c3d] text-white shadow-xs'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-              }`}
+                }`}
             >
               <span>New / Submitted</span>
               <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono ${filterStatus === 'Submitted' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-800'}`}>
@@ -641,11 +633,10 @@ export function Applications() {
             <button
               type="button"
               onClick={() => setFilterStatus('PendingDocs')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                filterStatus === 'PendingDocs'
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${filterStatus === 'PendingDocs'
                   ? 'bg-[#0b1c3d] text-white shadow-xs'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-              }`}
+                }`}
             >
               <span>Pending Docs</span>
               <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono ${filterStatus === 'PendingDocs' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-800'}`}>
@@ -656,11 +647,10 @@ export function Applications() {
             <button
               type="button"
               onClick={() => setFilterStatus('Approved')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                filterStatus === 'Approved'
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${filterStatus === 'Approved'
                   ? 'bg-[#0b1c3d] text-white shadow-xs'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-              }`}
+                }`}
             >
               <span>Approved Members</span>
               <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono ${filterStatus === 'Approved' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-800'}`}>
@@ -672,11 +662,10 @@ export function Applications() {
               <button
                 type="button"
                 onClick={() => setFilterStatus('Rejected')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  filterStatus === 'Rejected'
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${filterStatus === 'Rejected'
                     ? 'bg-[#0b1c3d] text-white shadow-xs'
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                }`}
+                  }`}
               >
                 <span>Rejected</span>
                 <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono ${filterStatus === 'Rejected' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-800'}`}>
@@ -745,11 +734,10 @@ export function Applications() {
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 sm:p-8 max-w-md w-full space-y-5 animate-fade-in text-left">
             <div className="flex items-center gap-3">
               <div
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
-                  actionType === 'Approve'
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${actionType === 'Approve'
                     ? 'bg-emerald-100 text-emerald-600 border border-emerald-200'
                     : 'bg-rose-100 text-rose-600 border border-rose-200'
-                }`}
+                  }`}
               >
                 {actionType === 'Approve' ? (
                   <CheckCircle2 className="w-6 h-6" />
@@ -795,11 +783,10 @@ export function Applications() {
                 type="button"
                 disabled={isProcessing}
                 onClick={handleConfirmAction}
-                className={`px-5 py-2.5 rounded-xl text-white font-black text-xs uppercase tracking-wider shadow-md cursor-pointer disabled:opacity-50 inline-flex items-center gap-2 ${
-                  actionType === 'Approve'
+                className={`px-5 py-2.5 rounded-xl text-white font-black text-xs uppercase tracking-wider shadow-md cursor-pointer disabled:opacity-50 inline-flex items-center gap-2 ${actionType === 'Approve'
                     ? 'bg-[#00C853] hover:bg-emerald-600'
                     : 'bg-rose-600 hover:bg-rose-700'
-                }`}
+                  }`}
               >
                 {isProcessing ? (
                   <>

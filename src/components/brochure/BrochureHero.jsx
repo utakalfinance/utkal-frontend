@@ -15,13 +15,15 @@ import {
 } from 'lucide-react';
 import brandLogo from '../../assets/image copy 7.png';
 import udyamPdf from '../../assets/Print _ Udyam Registration Certificate.pdf';
+import { StatutoryPdfModal } from '../common/StatutoryPdfModal';
 
 export function BrochureHero() {
   const navigate = useNavigate();
   const [copyStatus, setCopyStatus] = useState(false);
+  const [isStatutoryModalOpen, setIsStatutoryModalOpen] = useState(false);
 
   const handlePrint = () => {
-    window.print();
+    setIsStatutoryModalOpen(true);
   };
 
   const handleShare = async () => {
@@ -169,7 +171,8 @@ export function BrochureHero() {
 
           <button
             onClick={handlePrint}
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#004085] hover:bg-blue-900 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-blue-900/20"
+            className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#004085] hover:bg-blue-900 text-white text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-blue-900/20 cursor-pointer"
+            title="Open Statutory 2-Page Member Admission Form PDF"
           >
             <Printer className="w-3.5 h-3.5 text-white" />
             <span>PRINT / SAVE PDF</span>
@@ -330,6 +333,12 @@ export function BrochureHero() {
           </div>
         </div>
       </div>
+
+      {/* Official Statutory 2-Page Member Admission Form PDF Modal */}
+      <StatutoryPdfModal
+        isOpen={isStatutoryModalOpen}
+        onClose={() => setIsStatutoryModalOpen(false)}
+      />
     </div>
   </div>
 );
