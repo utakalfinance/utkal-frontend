@@ -20,6 +20,7 @@ import {
   Layers
 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
+import { ZoomableImageViewer } from '../../components/common/ZoomableImageViewer';
 
 export function GalleryManagement() {
   const { galleryItems = [], addGalleryItem, updateGalleryItem, deleteGalleryItem } = useAdmin();
@@ -618,14 +619,12 @@ export function GalleryManagement() {
             </div>
 
             {/* IMAGE CANVAS */}
-            <div className="flex-1 flex items-center justify-center overflow-hidden my-3">
-              <img
+            <div className="flex-1 flex items-center justify-center overflow-hidden my-3 rounded-2xl">
+              <ZoomableImageViewer
                 src={previewItem.imageUrl}
                 alt={previewItem.title}
-                className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl transition-transform duration-300"
-                style={{
-                  transform: `scale(${zoomLevel}) rotate(${rotation}deg)`,
-                }}
+                minZoom={0.5}
+                maxZoom={4.0}
               />
             </div>
 

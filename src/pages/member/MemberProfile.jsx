@@ -189,7 +189,7 @@ export function MemberProfile() {
           <button
             type="button"
             onClick={() => handleOpenEdit('personal')}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold text-white bg-[#004085] hover:bg-[#003066] shadow-xs hover:shadow transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black text-white bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-600/25 hover:shadow-lg transition-all cursor-pointer"
           >
             <Pencil className="w-3.5 h-3.5" />
             <span>Edit Profile</span>
@@ -319,6 +319,7 @@ export function MemberProfile() {
         addressProofType={addressProofType}
         addressProofNumber={addressProofNumber}
         isApproved={isApproved}
+        verificationRemarks={application?.verificationRemarks || application?.rejectionReason || null}
       />
 
       {/* 7. STATUTORY UPDATE & COMPLIANCE NOTICE */}

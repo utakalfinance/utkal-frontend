@@ -53,7 +53,7 @@ export const PRODUCT_CARDS = [
       'Instant Gold Loan Valuation',
       'Minimal KYC Documentation',
     ],
-    buttonText: 'Apply For Loan',
+    buttonText: 'Apply for Loan',
     buttonVariant: 'outline',
   },
   {

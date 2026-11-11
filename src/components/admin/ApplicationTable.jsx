@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, CheckCircle2, XCircle, Clock, Edit, FileText, Image as ImageIcon } from 'lucide-react';
+import { Eye, CheckCircle2, XCircle, Clock, Edit, FileText, Image as ImageIcon, Trash2 } from 'lucide-react';
 
-export function ApplicationTable({ applications, onApprove, onReject, onEdit, onViewReceipt }) {
+export function ApplicationTable({ applications, onApprove, onReject, onEdit, onViewReceipt, onDelete }) {
   const navigate = useNavigate();
 
   return (
@@ -112,6 +112,17 @@ export function ApplicationTable({ applications, onApprove, onReject, onEdit, on
                     <span>Edit</span>
                   </button>
                 </div>
+
+                {isRejected && (
+                  <button
+                    type="button"
+                    onClick={() => onDelete && onDelete(app)}
+                    className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/90 font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Delete Rejected Application</span>
+                  </button>
+                )}
 
                 {isPending && (
                   <div className="grid grid-cols-2 gap-2 w-full">
@@ -302,6 +313,18 @@ export function ApplicationTable({ applications, onApprove, onReject, onEdit, on
                       <Edit className="w-3.5 h-3.5 text-amber-700" />
                       <span>Edit</span>
                     </button>
+
+                    {isRejected && (
+                      <button
+                        type="button"
+                        onClick={() => onDelete && onDelete(app)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-[11px] transition-colors cursor-pointer"
+                        title="Delete Rejected Application"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Delete</span>
+                      </button>
+                    )}
 
                     {isPending && (
                       <>

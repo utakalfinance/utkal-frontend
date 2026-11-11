@@ -32,7 +32,7 @@ export function Home() {
             Plan with accurate bank-grade formulas. Calculate exact monthly EMIs or forecast deposit growth.
           </p>
         </div>
-        <EmiCalculator onApplyNow={() => openApplyModal()} />
+        <EmiCalculator onApplyNow={(loanData) => openApplyModal(loanData)} />
       </section>
 
       <ManagingDirector onApplyNow={openApplyModal} />

@@ -219,12 +219,19 @@ export async function getLoanProductBySlug(slug) {
   return MOCK_LOAN_PRODUCTS.find((p) => p.slug === slug) || null;
 }
 
+import { submitLoanEnquiryApi } from './loanEnquiryService';
+
 export async function submitLoanApplication(applicationData) {
-  await mockDelay(800);
-  // Ready to be replaced by: return api.post('/loans/apply', applicationData);
-  return {
-    success: true,
-    applicationId: `UF-${Math.floor(100000 + Math.random() * 900000)}`,
-    message: 'Application submitted successfully! Our representative will contact you shortly.',
-  };
+  try {
+    const res = await submitLoanEnquiryApi(applicationData);
+    return {
+      success: true,
+      applicationId: res.enquiryId,
+      enquiryId: res.enquiryId,
+      message: res.message,
+      enquiry: res.enquiry,
+    };
+  } catch (err) {
+    throw err;
+  }
 }

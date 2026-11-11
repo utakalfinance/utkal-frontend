@@ -30,19 +30,21 @@ import {
   RotateCw,
   RotateCcw,
   Sparkles,
-  FileCheck
+  FileCheck,
+  Trash2
 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import { StatusBadge } from '../../components/admin/StatusBadge';
 import { EditApplicationModal } from '../../components/admin/EditApplicationModal';
 import { PaymentReceiptModal } from '../../components/admin/PaymentReceiptModal';
+import { ZoomableImageViewer } from '../../components/common/ZoomableImageViewer';
 import { getBackendAssetUrl } from '../../config/env';
 import indusIndQr from '../../assets/image copy 23.png';
 
 export function ApplicationDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { applications, updateApplicationStatus, updateApplication, resendCredentials, markApplicationAsSeen } = useAdmin();
+  const { applications, updateApplicationStatus, updateApplication, deleteApplication, resendCredentials, markApplicationAsSeen } = useAdmin();
 
   const [message, setMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -99,6 +101,26 @@ export function ApplicationDetails() {
       console.error('Error updating status:', err);
       setErrorMessage(err.message || 'Failed to update application status.');
     } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDeleteApplication = async () => {
+    if (!app) return;
+    const confirmDelete = window.confirm(
+      `Are you sure you want to permanently delete this rejected application (${app.applicationId || app.id} - ${app.applicantName})? This action cannot be undone.`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      setIsProcessing(true);
+      setErrorMessage('');
+      const mongoId = app._id || app.id;
+      await deleteApplication(mongoId);
+      navigate('/admin-dashboard/applications');
+    } catch (err) {
+      console.error('Error deleting application:', err);
+      setErrorMessage(err.message || 'Failed to delete application.');
       setIsProcessing(false);
     }
   };
@@ -177,7 +199,7 @@ export function ApplicationDetails() {
               <StatusBadge status={app.status} />
             </div>
             <p className="text-xs text-slate-500 font-mono">
-              Ref ID: {app.refId} • Member ID: {app.memberId} • ID: {app.id}
+              Ref ID: {app.refId} • Member ID: {app.memberId || <span className="text-amber-600 font-bold">Pending Approval</span>} • ID: {app.id}
             </p>
           </div>
         </div>
@@ -263,6 +285,19 @@ export function ApplicationDetails() {
             <XCircle className="w-4 h-4" />
             <span>Reject Application</span>
           </button>
+
+          {app.status?.toLowerCase() === 'rejected' && (
+            <button
+              type="button"
+              disabled={isProcessing}
+              onClick={handleDeleteApplication}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-black text-xs uppercase tracking-wider transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+              title="Permanently Delete Rejected Application"
+            >
+              <Trash2 className="w-4 h-4 text-rose-600" />
+              <span>Delete Application</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -286,12 +321,12 @@ export function ApplicationDetails() {
           </div>
 
           <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-            <div><strong className="block text-[10px] text-slate-400 uppercase">FULL LEGAL NAME</strong><span className="font-extrabold text-slate-900">{app.applicantName}</span></div>
-            <div><strong className="block text-[10px] text-slate-400 uppercase">FATHER / HUSBAND / GUARDIAN</strong><span className="font-bold text-slate-800">{app.relationshipPrefix} {app.fatherLegalName}</span></div>
-            <div><strong className="block text-[10px] text-slate-400 uppercase">DATE OF BIRTH &amp; AGE</strong><span className="font-bold text-slate-800">{app.dob} ({app.age} Years)</span></div>
-            <div><strong className="block text-[10px] text-slate-400 uppercase">GENDER &amp; MARITAL STATUS</strong><span className="font-bold text-slate-800">{app.gender} • {app.maritalStatus}</span></div>
-            <div><strong className="block text-[10px] text-slate-400 uppercase">RELIGION &amp; CASTE CATEGORY</strong><span className="font-bold text-slate-800">{app.religion} • {app.category}</span></div>
-            <div><strong className="block text-[10px] text-slate-400 uppercase">EDUCATION &amp; OCCUPATION</strong><span className="font-bold text-slate-800">{app.education} • {app.occupation}</span></div>
+            <div><strong className="block text-[10px] text-slate-400 uppercase">FULL LEGAL NAME</strong><span className="font-extrabold text-slate-900">{app.applicantName || '—'}</span></div>
+            <div><strong className="block text-[10px] text-slate-400 uppercase">FATHER / HUSBAND / GUARDIAN</strong><span className="font-bold text-slate-800">{[app.relationshipPrefix, app.fatherLegalName].filter(Boolean).join(' ') || '—'}</span></div>
+            <div><strong className="block text-[10px] text-slate-400 uppercase">DATE OF BIRTH &amp; AGE</strong><span className="font-bold text-slate-800">{app.dob ? `${app.dob}${app.age ? ` (${app.age} Years)` : ''}` : '—'}</span></div>
+            <div><strong className="block text-[10px] text-slate-400 uppercase">GENDER &amp; MARITAL STATUS</strong><span className="font-bold text-slate-800">{[app.gender, app.maritalStatus].filter(Boolean).join(' • ') || '—'}</span></div>
+            <div><strong className="block text-[10px] text-slate-400 uppercase">RELIGION &amp; CASTE CATEGORY</strong><span className="font-bold text-slate-800">{[app.religion, app.category].filter(Boolean).join(' • ') || '—'}</span></div>
+            <div><strong className="block text-[10px] text-slate-400 uppercase">EDUCATION &amp; OCCUPATION</strong><span className="font-bold text-slate-800">{[app.education, app.occupation].filter(Boolean).join(' • ') || '—'}</span></div>
           </div>
         </div>
 
@@ -307,23 +342,36 @@ export function ApplicationDetails() {
 
           <div className="p-5 space-y-4 text-xs">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-slate-100 pb-3">
-              <div><strong className="block text-[10px] text-slate-400 uppercase">PRIMARY MOBILE</strong><span className="font-mono font-bold text-slate-900">+91 {app.mobile}</span></div>
-              <div><strong className="block text-[10px] text-slate-400 uppercase">ALTERNATE CONTACT</strong><span className="font-mono text-slate-700">+91 {app.altMobile}</span></div>
-              <div><strong className="block text-[10px] text-slate-400 uppercase">REGISTERED EMAIL</strong><span className="font-mono font-bold text-slate-900 truncate block">{app.email}</span></div>
-              <div><strong className="block text-[10px] text-slate-400 uppercase">INCOME TAX PAN</strong><span className="font-mono font-bold text-amber-600">{app.pan}</span></div>
+              <div><strong className="block text-[10px] text-slate-400 uppercase">PRIMARY MOBILE</strong><span className="font-mono font-bold text-slate-900">{app.mobile ? `+91 ${app.mobile}` : '—'}</span></div>
+              <div><strong className="block text-[10px] text-slate-400 uppercase">ALTERNATE CONTACT</strong><span className="font-mono text-slate-700">{app.altMobile ? `+91 ${app.altMobile}` : '—'}</span></div>
+              <div><strong className="block text-[10px] text-slate-400 uppercase">REGISTERED EMAIL</strong><span className="font-mono font-bold text-slate-900 truncate block">{app.email || '—'}</span></div>
+              <div><strong className="block text-[10px] text-slate-400 uppercase">INCOME TAX PAN</strong><span className="font-mono font-bold text-amber-600">{app.pan || app.documentDetails?.idProofNumber || 'Not Provided'}</span></div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 space-y-1">
                 <strong className="block text-[10px] text-slate-500 uppercase">PERMANENT RESIDENTIAL ADDRESS</strong>
-                <p className="font-bold text-slate-900">{app.address1}</p>
-                <p className="text-[11px] text-slate-600">Taluka: {app.villageTown} | District: {app.district} | State: {app.state} | PIN: {app.pincode}</p>
+                <p className="font-bold text-slate-900">{app.address1 || 'Address not specified'}</p>
+                <p className="text-[11px] text-slate-600">
+                  {[
+                    app.villageTown ? `Taluka: ${app.villageTown}` : '',
+                    app.district ? `District: ${app.district}` : '',
+                    app.state ? `State: ${app.state}` : '',
+                    app.pincode ? `PIN: ${app.pincode}` : '',
+                  ].filter(Boolean).join(' | ') || 'No address details'}
+                </p>
               </div>
 
               <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 space-y-1">
                 <strong className="block text-[10px] text-slate-500 uppercase">MAILING ADDRESS</strong>
-                <p className="font-bold text-slate-900">{app.address1}</p>
-                <p className="text-[11px] text-slate-600">District: {app.district} | State: {app.state} | PIN: {app.pincode}</p>
+                <p className="font-bold text-slate-900">{app.address1 || 'Address not specified'}</p>
+                <p className="text-[11px] text-slate-600">
+                  {[
+                    app.district ? `District: ${app.district}` : '',
+                    app.state ? `State: ${app.state}` : '',
+                    app.pincode ? `PIN: ${app.pincode}` : '',
+                  ].filter(Boolean).join(' | ') || 'No address details'}
+                </p>
               </div>
             </div>
           </div>
@@ -340,9 +388,9 @@ export function ApplicationDetails() {
           </div>
 
           <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-            <div><strong className="block text-[10px] text-slate-400 uppercase">REGISTERED BRANCH</strong><span className="font-extrabold text-slate-900">{app.branch}</span></div>
-            <div><strong className="block text-[10px] text-slate-400 uppercase">INTRODUCER / ASSOCIATE</strong><span className="font-extrabold text-slate-900">{app.introducer}</span></div>
-            <div><strong className="block text-[10px] text-slate-400 uppercase">EMPLOYEE (EMP) ID</strong><span className="font-mono font-bold text-slate-900">{app.empId}</span></div>
+            <div><strong className="block text-[10px] text-slate-400 uppercase">REGISTERED BRANCH</strong><span className="font-extrabold text-slate-900">{app.branch || '—'}</span></div>
+            <div><strong className="block text-[10px] text-slate-400 uppercase">INTRODUCER / ASSOCIATE</strong><span className="font-extrabold text-slate-900">{app.introducer || 'Direct / Walk-in'}</span></div>
+            <div><strong className="block text-[10px] text-slate-400 uppercase">EMPLOYEE (EMP) ID</strong><span className="font-mono font-bold text-slate-900">{app.empId || '—'}</span></div>
             <div><strong className="block text-[10px] text-slate-400 uppercase">REGISTRY ACT</strong><span className="font-bold text-slate-800">Companies Act 2013 &amp; Nidhi Rules 2014</span></div>
           </div>
         </div>
@@ -358,10 +406,10 @@ export function ApplicationDetails() {
           </div>
 
           <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-            <div><strong className="block text-[10px] text-slate-400 uppercase">NOMINEE NAME</strong><span className="font-extrabold text-slate-900">{app.nomineeName}</span></div>
-            <div><strong className="block text-[10px] text-slate-400 uppercase">RELATIONSHIP</strong><span className="font-bold text-slate-800">{app.nomineeRel}</span></div>
-            <div><strong className="block text-[10px] text-slate-400 uppercase">NOMINEE DOB</strong><span className="font-bold text-slate-800">{app.nomineeDob}</span></div>
-            <div><strong className="block text-[10px] text-slate-400 uppercase">ADDRESS</strong><span className="font-bold text-slate-800">{app.nomineeAddr}</span></div>
+            <div><strong className="block text-[10px] text-slate-400 uppercase">NOMINEE NAME</strong><span className="font-extrabold text-slate-900">{app.nomineeName || '—'}</span></div>
+            <div><strong className="block text-[10px] text-slate-400 uppercase">RELATIONSHIP</strong><span className="font-bold text-slate-800">{app.nomineeRel || '—'}</span></div>
+            <div><strong className="block text-[10px] text-slate-400 uppercase">NOMINEE DOB</strong><span className="font-bold text-slate-800">{app.nomineeDob || '—'}</span></div>
+            <div><strong className="block text-[10px] text-slate-400 uppercase">ADDRESS</strong><span className="font-bold text-slate-800">{app.nomineeAddr || '—'}</span></div>
           </div>
         </div>
 
@@ -969,7 +1017,7 @@ export function ApplicationDetails() {
               </div>
 
               {/* INTERACTIVE VIEWER CANVAS */}
-              <div className="bg-slate-950 overflow-hidden flex-1 w-full min-h-0 flex items-center justify-center relative p-2 sm:p-4">
+              <div className="bg-slate-950 overflow-hidden flex-1 w-full min-h-0 flex items-center justify-center relative p-0">
                 {(() => {
                   const url = selectedDocPreview.url || '';
                   const clean = url.toLowerCase();
@@ -992,87 +1040,14 @@ export function ApplicationDetails() {
                   }
 
                   return (
-                    <div className="w-full h-full flex items-center justify-center overflow-auto p-2">
-                      <img
-                        src={url}
-                        alt={selectedDocPreview.title}
-                        style={{
-                          transform: `scale(${docZoom}) rotate(${docRotation}deg)`,
-                          transition: 'transform 0.2s ease-in-out',
-                        }}
-                        className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          if (e.currentTarget.nextSibling) {
-                            e.currentTarget.nextSibling.style.display = 'flex';
-                          }
-                        }}
-                      />
-                      <div className="hidden flex-col items-center justify-center text-center text-slate-300 p-8 space-y-3 bg-slate-900/80 rounded-2xl border border-slate-800">
-                        <FileText className="w-12 h-12 text-blue-400 mx-auto" />
-                        <p className="font-bold text-sm">Unable to render preview directly</p>
-                        <p className="text-xs text-slate-400">Click below to open or download the document.</p>
-                        <a
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700"
-                        >
-                          <span>Open File</span>
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
-                      </div>
-                    </div>
+                    <ZoomableImageViewer
+                      src={url}
+                      alt={selectedDocPreview.title}
+                      minZoom={0.5}
+                      maxZoom={5.0}
+                    />
                   );
                 })()}
-
-                {/* FLOATING ZOOM & ROTATION TOOLBAR FOR IMAGES */}
-                {!(
-                  selectedDocPreview.url.toLowerCase().startsWith('data:application/pdf') ||
-                  /\.pdf($|\?)/i.test(selectedDocPreview.url.toLowerCase())
-                ) && (
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white border border-slate-700 px-3 py-1.5 rounded-2xl shadow-xl flex items-center gap-2 backdrop-blur-md">
-                    <button
-                      type="button"
-                      onClick={() => setDocZoom((prev) => Math.min(prev + 0.25, 3))}
-                      className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white transition-colors cursor-pointer"
-                      title="Zoom In"
-                    >
-                      <ZoomIn className="w-4 h-4" />
-                    </button>
-                    <span className="text-[11px] font-mono font-bold text-slate-300 w-12 text-center">
-                      {Math.round(docZoom * 100)}%
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setDocZoom((prev) => Math.max(prev - 0.25, 0.5))}
-                      className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white transition-colors cursor-pointer"
-                      title="Zoom Out"
-                    >
-                      <ZoomOut className="w-4 h-4" />
-                    </button>
-                    <span className="w-px h-4 bg-slate-700" />
-                    <button
-                      type="button"
-                      onClick={() => setDocRotation((prev) => (prev + 90) % 360)}
-                      className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white transition-colors cursor-pointer"
-                      title="Rotate 90°"
-                    >
-                      <RotateCw className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDocZoom(1);
-                        setDocRotation(0);
-                      }}
-                      className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white transition-colors cursor-pointer text-[10px] font-bold"
-                      title="Reset View"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
               </div>
 
               {/* MODAL FOOTER */}

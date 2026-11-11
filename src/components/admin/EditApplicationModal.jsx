@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { getBackendAssetUrl } from '../../config/env';
 import { uploadDocumentsApi } from '../../services/applicationService';
+import { ZoomableImageViewer } from '../common/ZoomableImageViewer';
 
 export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
   const [activeSection, setActiveSection] = useState('personal');
@@ -1798,10 +1799,11 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
                     className="w-full h-full rounded-xl bg-white"
                   />
                 ) : (
-                  <img
+                  <ZoomableImageViewer
                     src={previewDoc.url}
                     alt={previewDoc.title}
-                    className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
+                    minZoom={0.5}
+                    maxZoom={5.0}
                   />
                 )}
               </div>

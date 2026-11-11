@@ -420,8 +420,8 @@ export function EmiCalculator({ onApplyNow }) {
               <div className="mt-8">
                 <button
                   type="button"
-                  onClick={() => onApplyNow && onApplyNow(goldEligibleLoan, 12)}
-                  className="w-full bg-white hover:bg-slate-100 text-[#853406] font-extrabold py-3.5 px-4 rounded-xl shadow-lg transition-all duration-200 text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2"
+                  onClick={() => onApplyNow && onApplyNow()}
+                  className="w-full bg-white hover:bg-slate-100 text-[#853406] font-extrabold py-3.5 px-4 rounded-xl shadow-lg transition-all duration-200 text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span>APPLY FOR GOLD LOAN</span>
                 </button>
@@ -544,8 +544,8 @@ export function EmiCalculator({ onApplyNow }) {
               <div className="mt-8">
                 <button
                   type="button"
-                  onClick={() => onApplyNow && onApplyNow(amount, tenure)}
-                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold py-3.5 px-4 rounded-xl shadow-lg transition-all duration-200 text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2"
+                  onClick={() => onApplyNow && onApplyNow()}
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold py-3.5 px-4 rounded-xl shadow-lg transition-all duration-200 text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span>APPLY FOR THIS LOAN</span>
                   <ArrowRight className="w-4 h-4" />

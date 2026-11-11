@@ -28,7 +28,41 @@ export function Navbar({ onOpenApplyModal }) {
   const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const { isAuthenticated: isAdmin } = useAdmin();
-  const { isAuthenticated: isMember } = useMemberAuth();
+  const { isAuthenticated: isMember, memberUser } = useMemberAuth();
+
+  // District Admin session state
+  const [districtAdminUser, setDistrictAdminUser] = useState(() => {
+    try {
+      const token = localStorage.getItem('utkal_district_admin_token');
+      const raw = localStorage.getItem('utkal_district_admin_user');
+      if (token && raw) {
+        const u = JSON.parse(raw);
+        if (u?.role === 'district_admin') return u;
+      }
+    } catch {}
+    return null;
+  });
+
+  useEffect(() => {
+    const checkDistrictAdmin = () => {
+      try {
+        const token = localStorage.getItem('utkal_district_admin_token');
+        const raw = localStorage.getItem('utkal_district_admin_user');
+        if (token && raw) {
+          const u = JSON.parse(raw);
+          if (u?.role === 'district_admin') {
+            setDistrictAdminUser(u);
+            return;
+          }
+        }
+      } catch {}
+      setDistrictAdminUser(null);
+    };
+
+    checkDistrictAdmin();
+    window.addEventListener('storage', checkDistrictAdmin);
+    return () => window.removeEventListener('storage', checkDistrictAdmin);
+  }, [location.pathname]);
 
   const productItems = [
     {
@@ -115,6 +149,15 @@ export function Navbar({ onOpenApplyModal }) {
             }`}
           >
             About Us
+          </Link>
+
+          <Link
+            to="/loans"
+            className={`text-xs xl:text-sm font-bold transition-colors whitespace-nowrap ${
+              isActive('/loans') ? 'text-blue-700 font-extrabold' : 'text-slate-700 hover:text-blue-700'
+            }`}
+          >
+            Loans
           </Link>
 
           <Link
@@ -214,14 +257,32 @@ export function Navbar({ onOpenApplyModal }) {
 
         {/* Right: Action Buttons */}
         <div className="hidden xl:flex items-center gap-2.5 xl:gap-3 shrink-0">
-          {/* Auth Button: Admin when admin logged in, otherwise Login */}
+          {/* Auth Button: Admin when admin logged in, District Admin when district admin logged in, Member when member logged in, otherwise Login */}
           {isAdmin ? (
             <Link
               to="/admin-dashboard"
               className="text-xs xl:text-sm font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 px-3.5 py-2 rounded-xl transition-all border border-amber-300 shadow-xs whitespace-nowrap flex items-center gap-1.5 hover:shadow-sm"
+              title="Super Admin Portal"
             >
               <Shield className="w-3.5 h-3.5 text-amber-600 fill-amber-500/20" />
               <span>Admin</span>
+            </Link>
+          ) : districtAdminUser ? (
+            <Link
+              to="/district-dashboard"
+              className="text-xs xl:text-sm font-bold text-blue-900 bg-blue-50 hover:bg-blue-100 px-3.5 py-2 rounded-xl transition-all border border-blue-300 shadow-xs whitespace-nowrap flex items-center gap-1.5 hover:shadow-sm"
+              title={`District Admin: ${districtAdminUser.name || 'District Partner'} (${districtAdminUser.assignedDistrict || 'Circle'})`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+              <span>District</span>
+            </Link>
+          ) : isMember ? (
+            <Link
+              to="/member-dashboard"
+              className="text-xs xl:text-sm font-bold text-blue-900 bg-blue-50 hover:bg-blue-100 px-3.5 py-2 rounded-xl transition-all border border-blue-200 shadow-xs whitespace-nowrap flex items-center gap-1.5 hover:shadow-sm"
+            >
+              <LayoutDashboard className="w-3.5 h-3.5 text-blue-700" />
+              <span>{memberUser?.name ? memberUser.name.split(' ')[0] : 'Member'}</span>
             </Link>
           ) : (
             <Link
@@ -265,6 +326,17 @@ export function Navbar({ onOpenApplyModal }) {
               }`}
             >
               <span>About Us</span>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            </Link>
+
+            <Link
+              to="/loans"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold ${
+                isActive('/loans') ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <span>Loans</span>
               <ChevronRight className="w-4 h-4 text-slate-400" />
             </Link>
 
@@ -374,6 +446,24 @@ export function Navbar({ onOpenApplyModal }) {
               >
                 <Shield className="w-4 h-4 text-amber-600 fill-amber-500/20" />
                 <span>Admin Portal</span>
+              </Link>
+            ) : districtAdminUser ? (
+              <Link
+                to="/district-dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full bg-blue-50 hover:bg-blue-100 text-blue-900 font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-sm transition-colors border border-blue-300 shadow-xs"
+              >
+                <ShieldCheck className="w-4 h-4 text-blue-600" />
+                <span>District Portal</span>
+              </Link>
+            ) : isMember ? (
+              <Link
+                to="/member-dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full bg-blue-50 hover:bg-blue-100 text-blue-900 font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-sm transition-colors border border-blue-200 shadow-xs"
+              >
+                <LayoutDashboard className="w-4 h-4 text-blue-700" />
+                <span>{memberUser?.name ? `${memberUser.name} (Member Portal)` : 'Member'}</span>
               </Link>
             ) : (
               <Link

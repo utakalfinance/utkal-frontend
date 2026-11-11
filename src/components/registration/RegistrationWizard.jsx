@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { RegistrationProgress } from './RegistrationProgress';
 import { StepNavigation } from './StepNavigation';
 import { StepPersonal } from './StepPersonal';
@@ -25,6 +26,15 @@ export function RegistrationWizard({ activeStep = 1, onQuickFillTrigger }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
+  const [searchParams] = useSearchParams();
+  const urlReferral = (
+    searchParams.get('ref') ||
+    searchParams.get('referralCode') ||
+    searchParams.get('referral') ||
+    searchParams.get('introducer') ||
+    ''
+  ).trim();
+  const [referralCode, setReferralCode] = useState(urlReferral);
 
   const [formData, setFormData] = useState({
     personal: {
@@ -70,6 +80,7 @@ export function RegistrationWizard({ activeStep = 1, onQuickFillTrigger }) {
       membershipType: 'Associate Member',
       membershipAmount: '200',
       preferredCommunication: 'Both',
+      referralCode: urlReferral,
     },
     nominee: {
       fullName: '',
@@ -215,6 +226,10 @@ export function RegistrationWizard({ activeStep = 1, onQuickFillTrigger }) {
       }
       if (!personal.lastName || !personal.lastName.trim()) {
         personalErrors.lastName = 'Last Name is required.';
+        isValid = false;
+      }
+      if (!personal.dob || !personal.dob.trim()) {
+        personalErrors.dob = 'Date of Birth is required.';
         isValid = false;
       }
       if (!isValid) {
@@ -510,6 +525,8 @@ export function RegistrationWizard({ activeStep = 1, onQuickFillTrigger }) {
 
       const payload = {
         ...formData,
+        referralCode: referralCode || formData.account?.referralCode || '',
+        introducer: referralCode || formData.account?.referralCode || '',
         payment: {
           method: paymentInfo.method || 'UPI (IndusInd Bank QR)',
           amount: 200,
@@ -634,6 +651,29 @@ export function RegistrationWizard({ activeStep = 1, onQuickFillTrigger }) {
 
       {/* STEP CONTENT BODY */}
       <div className="p-4 sm:p-6 md:p-8 min-h-[360px]">
+        {referralCode && (
+          <div className="mb-5 p-3.5 sm:p-4 rounded-2xl bg-blue-50/90 border border-blue-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-blue-950 shadow-2xs">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-blue-600 text-white shrink-0 shadow-xs">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 block">
+                  Statutory Associate Referral Attribution
+                </span>
+                <span className="font-semibold text-slate-800">
+                  Registering through Associate Referral Code:{' '}
+                  <strong className="font-mono text-blue-800 font-black">{referralCode}</strong>
+                </span>
+              </div>
+            </div>
+            <span className="shrink-0 self-start sm:self-center inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              Referral Linked
+            </span>
+          </div>
+        )}
+
         {submitError && (
           <div className="mb-4 p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-bold flex items-center gap-2">
             <span>{submitError}</span>

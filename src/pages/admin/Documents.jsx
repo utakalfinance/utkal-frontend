@@ -25,11 +25,32 @@ import {
 } from 'lucide-react';
 import { getDocumentsApi } from '../../services/applicationService';
 import { StatusBadge } from '../../components/admin/StatusBadge';
+import { ZoomableImageViewer } from '../../components/common/ZoomableImageViewer';
 import { getBackendAssetUrl as getFileUrl } from '../../config/env';
+import { useAdmin } from '../../context/AdminContext';
 
 export function Documents() {
-  const [applicationsWithDocs, setApplicationsWithDocs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { documents: contextDocs, refreshDocuments } = useAdmin();
+
+  const [applicationsWithDocs, setApplicationsWithDocs] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('admin_documents_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return Array.isArray(contextDocs) && contextDocs.length > 0 ? contextDocs : [];
+  });
+
+  const [loading, setLoading] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('admin_documents_cache');
+      if (cached && JSON.parse(cached)?.length > 0) return false;
+    } catch (e) {}
+    return !contextDocs || contextDocs.length === 0;
+  });
+
   const [error, setError] = useState(null);
 
   const [search, setSearch] = useState('');
@@ -38,24 +59,34 @@ export function Documents() {
 
   const [selectedPreviewDoc, setSelectedPreviewDoc] = useState(null);
 
-  // Fetch real applications and complete documentDetails from backend API
-  const fetchDocuments = useCallback(async () => {
-    setLoading(true);
+  // Fetch real applications and complete documentDetails from backend API with background revalidation
+  const fetchDocuments = useCallback(async (isSilent = false) => {
+    if (!isSilent && applicationsWithDocs.length === 0) {
+      setLoading(true);
+    }
     setError(null);
     try {
-      const docsData = await getDocumentsApi();
-      setApplicationsWithDocs(Array.isArray(docsData) ? docsData : []);
+      const docsData = await (refreshDocuments ? refreshDocuments() : getDocumentsApi());
+      if (Array.isArray(docsData)) {
+        setApplicationsWithDocs(docsData);
+        try {
+          sessionStorage.setItem('admin_documents_cache', JSON.stringify(docsData));
+        } catch (e) {}
+      }
     } catch (err) {
       console.error('Error fetching backend documents:', err);
-      setError('Unable to load documents from database. Please check backend connection.');
+      if (applicationsWithDocs.length === 0) {
+        setError('Unable to load documents from database. Please check backend connection.');
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applicationsWithDocs.length, refreshDocuments]);
 
   useEffect(() => {
-    fetchDocuments();
-  }, [fetchDocuments]);
+    const hasExistingData = applicationsWithDocs.length > 0;
+    fetchDocuments(hasExistingData);
+  }, []); // Run on mount
 
   // Lock background, html, & main container scroll when document preview modal is active
   useEffect(() => {
@@ -857,23 +888,12 @@ export function Documents() {
                 selectedPreviewDoc.url.match(/\.(jpeg|jpg|png|gif|webp|svg)($|\?)/i) ||
                 selectedPreviewDoc.type?.toLowerCase().includes('photo') ||
                 selectedPreviewDoc.type?.toLowerCase().includes('signature') ? (
-                  <div className="w-full h-full flex items-center justify-center p-3 overflow-hidden bg-slate-950">
-                    <img
-                      src={selectedPreviewDoc.url}
-                      alt={selectedPreviewDoc.title}
-                      className="max-w-full max-h-full object-contain rounded shadow-lg"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.style.display = 'none';
-                        e.target.parentNode.innerHTML = `
-                          <div class="text-center text-slate-300 p-6 space-y-2">
-                            <p class="font-bold text-sm">Unable to render image inline</p>
-                            <a href="${selectedPreviewDoc.url}" target="_blank" download class="text-blue-400 underline text-xs">Click here to open file</a>
-                          </div>
-                        `;
-                      }}
-                    />
-                  </div>
+                  <ZoomableImageViewer
+                    src={selectedPreviewDoc.url}
+                    alt={selectedPreviewDoc.title}
+                    minZoom={0.5}
+                    maxZoom={5.0}
+                  />
                 ) : selectedPreviewDoc.url.startsWith('data:application/pdf') || selectedPreviewDoc.url.match(/\.pdf($|\?)/i) ? (
                   <object
                     data={`${selectedPreviewDoc.url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}

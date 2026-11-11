@@ -100,6 +100,27 @@ export async function updateApplicationApi(id, updateData) {
 }
 
 /**
+ * Delete an application from backend MongoDB database
+ * DELETE /api/applications/:id
+ * @param {string} id - MongoDB document _id or applicationId
+ */
+export async function deleteApplicationApi(id) {
+  const response = await fetch(`${apiConfig.baseURL}/applications/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  const data = await response.json();
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || 'Failed to delete application');
+  }
+
+  return data;
+}
+
+/**
  * Fetch application document records from MongoDB
  * GET /api/applications/documents
  */

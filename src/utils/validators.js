@@ -12,33 +12,30 @@ export function validatePhone(phone) {
   return re.test(String(phone).replace(/\s+/g, ''));
 }
 
-export function validateLoanForm(formData) {
+export function validateLoanEnquiryForm(formData) {
   const errors = {};
 
-  if (!formData.fullName || formData.fullName.trim().length < 3) {
-    errors.fullName = 'Full name must be at least 3 characters.';
+  if (!formData.fullName || formData.fullName.trim().length < 2) {
+    errors.fullName = 'Full Name is required (minimum 2 characters).';
+  }
+
+  const cleanPhone = String(formData.mobileNumber || formData.phone || '').replace(/\D/g, '');
+  if (!cleanPhone || cleanPhone.length !== 10) {
+    errors.mobileNumber = 'Please provide a valid 10-digit mobile number.';
   }
 
   if (!formData.email || !validateEmail(formData.email)) {
     errors.email = 'Please provide a valid email address.';
   }
 
-  if (!formData.phone || !validatePhone(formData.phone)) {
-    errors.phone = 'Please provide a valid 10-digit mobile number.';
-  }
-
-  if (!formData.loanAmount || Number(formData.loanAmount) < 10000) {
-    errors.loanAmount = 'Minimum loan amount is ₹ 10,000.';
-  }
-
-  if (!formData.loanType) {
-    errors.loanType = 'Please select a loan type.';
-  }
-
   return {
     isValid: Object.keys(errors).length === 0,
     errors,
   };
+}
+
+export function validateLoanForm(formData) {
+  return validateLoanEnquiryForm(formData);
 }
 
 export function validateContactForm(formData) {

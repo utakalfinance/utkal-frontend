@@ -5,6 +5,7 @@ import { AuthLayout } from '../layouts/AuthLayout';
 import { Home } from '../pages/Home';
 import { About } from '../pages/About';
 import { Services } from '../pages/Services';
+import { Loans } from '../pages/Loans';
 import { LoanProducts } from '../pages/LoanProducts';
 import { Finance } from '../pages/Finance';
 import { RealEstate } from '../pages/RealEstate';
@@ -14,6 +15,7 @@ import { Brochure } from '../pages/Brochure';
 import { Gallery } from '../pages/Gallery';
 import { Login } from '../pages/Login';
 import { Register } from '../pages/Register';
+import { DistrictAdminLogin } from '../pages/DistrictAdminLogin';
 
 // Admin Imports
 import { AdminDashboardLayout } from '../pages/admin/AdminDashboardLayout';
@@ -31,6 +33,18 @@ import { NoticesManagement } from '../pages/admin/NoticesManagement';
 import { GalleryManagement } from '../pages/admin/GalleryManagement';
 import { AdminProfile } from '../pages/admin/AdminProfile';
 import { ProfileUpdateRequests } from '../pages/admin/ProfileUpdateRequests';
+import { LoanApprovals } from '../pages/admin/LoanApprovals';
+import { LoanDisbursement } from '../pages/admin/LoanDisbursement';
+import { AllDistrictApplications } from '../pages/admin/AllDistrictApplications';
+import { DistrictUnifiedManagement } from '../pages/admin/DistrictUnifiedManagement';
+import { DistrictDashboardLayout } from '../pages/district/DistrictDashboardLayout';
+import { DistrictDashboardHome } from '../pages/district/DistrictDashboardHome';
+import { DistrictAssociateManagement } from '../pages/district/DistrictAssociateManagement';
+import { DistrictReferralManagement } from '../pages/district/DistrictReferralManagement';
+import { DistrictFinancialRecords } from '../pages/district/DistrictFinancialRecords';
+import { DistrictCommissionManagement } from '../pages/district/DistrictCommissionManagement';
+import { DistrictPartnerReports } from '../pages/district/DistrictPartnerReports';
+import { DistrictProfile } from '../pages/district/DistrictProfile';
 
 import { MyApplication } from '../pages/MyApplication';
 
@@ -44,6 +58,16 @@ import { MemberPayments } from '../pages/member/MemberPayments';
 import { MemberTransactions } from '../pages/member/MemberTransactions';
 import { MemberDocuments } from '../pages/member/MemberDocuments';
 import { MemberNotifications } from '../pages/member/MemberNotifications';
+import { LoanOverview } from '../pages/member/loans/LoanOverview';
+import { AvailableLoans } from '../pages/member/loans/AvailableLoans';
+import { ApplyLoan } from '../pages/member/loans/ApplyLoan';
+import { TrackApplication } from '../pages/member/loans/TrackApplication';
+import { EmiSchedule } from '../pages/member/loans/EmiSchedule';
+import { NextLoanEligibility } from '../pages/member/loans/NextLoanEligibility';
+import { MyLoanApplications } from '../pages/member/loans/MyLoanApplications';
+import { MyActiveLoans } from '../pages/member/loans/MyActiveLoans';
+import { LoanRepayment } from '../pages/member/loans/LoanRepayment';
+import { LoanHistory } from '../pages/member/loans/LoanHistory';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -65,7 +89,7 @@ export function AppRoutes() {
           <Route index element={<Home />} />
           <Route path="about" element={<About />} />
           <Route path="services" element={<Services />} />
-          <Route path="loans" element={<LoanProducts />} />
+          <Route path="loans" element={<Loans />} />
           <Route path="finance" element={<Finance />} />
           <Route path="real-estate" element={<RealEstate />} />
           <Route path="insurance" element={<Insurance />} />
@@ -82,8 +106,16 @@ export function AppRoutes() {
         <Route path="member-login" element={<Navigate to="/login" replace />} />
         <Route path="admin-login" element={<Navigate to="/login" replace />} />
 
+        {/* Dedicated District Administrator Login */}
+        <Route path="district-admin/login" element={<DistrictAdminLogin />} />
+        <Route path="district-login" element={<Navigate to="/district-admin/login" replace />} />
+        <Route path="district/login" element={<Navigate to="/district-admin/login" replace />} />
+        <Route path="district-admin" element={<Navigate to="/district-admin/login" replace />} />
+        <Route path="district-admin/dashboard" element={<Navigate to="/district-dashboard" replace />} />
+
         {/* Statutory Membership Application Portal */}
         <Route path="register" element={<Register />} />
+        <Route path="membership-form" element={<Register />} />
 
         {/* Member Portal Routes */}
         <Route path="member" element={<Navigate to="/member-dashboard" replace />} />
@@ -94,7 +126,19 @@ export function AppRoutes() {
           <Route path="deposits" element={<MemberDeposits />} />
           <Route path="payments" element={<MemberPayments />} />
           <Route path="transactions" element={<MemberTransactions />} />
+          <Route path="loans" element={<Navigate to="/member-dashboard/loans/overview" replace />} />
+          <Route path="loans/overview" element={<LoanOverview />} />
+          <Route path="loans/available" element={<AvailableLoans />} />
+          <Route path="loans/apply" element={<ApplyLoan />} />
+          <Route path="loans/track" element={<TrackApplication />} />
+          <Route path="loans/emi-schedule" element={<EmiSchedule />} />
+          <Route path="loans/next-eligibility" element={<NextLoanEligibility />} />
+          <Route path="loans/applications" element={<TrackApplication />} />
+          <Route path="loans/active" element={<MyActiveLoans />} />
+          <Route path="loans/repayment" element={<EmiSchedule />} />
+          <Route path="loans/history" element={<LoanHistory />} />
           <Route path="documents" element={<MemberDocuments />} />
+          <Route path="kyc-documents" element={<MemberDocuments />} />
           <Route path="notifications" element={<MemberNotifications />} />
         </Route>
 
@@ -103,6 +147,34 @@ export function AppRoutes() {
         <Route path="admin/deposits" element={<Navigate to="/admin-dashboard/deposits" replace />} />
         <Route path="admin/transactions" element={<Navigate to="/admin-dashboard/transactions" replace />} />
         <Route path="admin/notices" element={<Navigate to="/admin-dashboard/notices" replace />} />
+        <Route path="admin/loan-enquiries" element={<Navigate to="/admin-dashboard/loans" replace />} />
+        <Route path="admin/districts" element={<Navigate to="/admin-dashboard/districts" replace />} />
+        <Route path="admin/district-admins" element={<Navigate to="/admin-dashboard/district-admins" replace />} />
+
+        {/* District Partner Dedicated Portal */}
+        <Route
+          path="district-dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['district_admin']}>
+              <DistrictDashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<DistrictDashboardHome />} />
+          <Route path="associates" element={<DistrictAssociateManagement />} />
+          <Route path="referrals" element={<DistrictReferralManagement />} />
+          <Route path="financial-records" element={<DistrictFinancialRecords />} />
+          <Route path="commissions" element={<Navigate to="/district-dashboard/financial-records" replace />} />
+          <Route path="reports" element={<DistrictPartnerReports />} />
+          <Route path="profile" element={<DistrictProfile />} />
+
+          {/* Legacy route aliases for backward compatibility */}
+          <Route path="applications" element={<Navigate to="/district-dashboard" replace />} />
+          <Route path="document-verification" element={<Navigate to="/district-dashboard/associates" replace />} />
+          <Route path="customer-verification" element={<Navigate to="/district-dashboard/associates" replace />} />
+          <Route path="decisions" element={<Navigate to="/district-dashboard" replace />} />
+          <Route path="notifications" element={<Navigate to="/district-dashboard" replace />} />
+        </Route>
 
         <Route
           path="admin-dashboard"
@@ -118,6 +190,16 @@ export function AppRoutes() {
           <Route path="members" element={<Members />} />
           <Route path="members/:memberId" element={<MemberDetails />} />
           <Route path="profile-updates" element={<ProfileUpdateRequests />} />
+          <Route path="loan-enquiries" element={<Navigate to="/admin-dashboard/loans" replace />} />
+          <Route path="loans" element={<LoanApprovals />} />
+          <Route path="all-district-applications" element={<AllDistrictApplications />} />
+          <Route path="district-applications" element={<AllDistrictApplications />} />
+          <Route path="loan-disbursements" element={<LoanDisbursement />} />
+          <Route path="loan-disbursement" element={<LoanDisbursement />} />
+          <Route path="emi-collections" element={<Navigate to="/admin-dashboard/loans" replace />} />
+          <Route path="emi-collection" element={<Navigate to="/admin-dashboard/loans" replace />} />
+          <Route path="districts" element={<DistrictUnifiedManagement />} />
+          <Route path="district-admins" element={<DistrictUnifiedManagement />} />
           <Route path="deposits" element={<DepositManagement />} />
           <Route path="payments" element={<Payments />} />
           <Route path="transactions" element={<Navigate to="/admin-dashboard/payments" replace />} />

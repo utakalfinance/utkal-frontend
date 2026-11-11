@@ -22,6 +22,7 @@ import {
 import { useAdmin } from '../../context/AdminContext';
 import { MemberDetailsCard } from '../../components/admin/MemberDetailsCard';
 import { MemberStatusBadge } from '../../components/admin/MemberStatusBadge';
+import { ZoomableImageViewer } from '../../components/common/ZoomableImageViewer';
 import { getBackendAssetUrl as getFileUrl } from '../../config/env';
 
 export function MemberDetails() {
@@ -553,24 +554,12 @@ export function MemberDetails() {
                   }
 
                   return (
-                    <div className="w-full h-full flex items-center justify-center p-3 overflow-hidden bg-slate-950">
-                      <img
-                        src={url}
-                        alt={selectedPreviewDoc.title}
-                        className="max-w-full max-h-full object-contain rounded shadow-lg"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          if (e.currentTarget.nextSibling) {
-                            e.currentTarget.nextSibling.style.display = 'flex';
-                          }
-                        }}
-                      />
-                      <div className="hidden flex-col items-center justify-center text-center text-slate-300 p-6 space-y-2 bg-slate-900 rounded-2xl border border-slate-800">
-                        <FileText className="w-12 h-12 text-blue-400 mx-auto" />
-                        <p className="font-bold text-sm">Unable to render inline</p>
-                        <a href={url} target="_blank" rel="noopener noreferrer" download className="text-blue-400 underline text-xs">Click here to open file</a>
-                      </div>
-                    </div>
+                    <ZoomableImageViewer
+                      src={url}
+                      alt={selectedPreviewDoc.title}
+                      minZoom={0.5}
+                      maxZoom={5.0}
+                    />
                   );
                 })()}
               </div>

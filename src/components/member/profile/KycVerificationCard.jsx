@@ -19,6 +19,7 @@ export function KycVerificationCard({
   addressProofType = 'Aadhaar Card',
   addressProofNumber = null,
   isApproved = true,
+  verificationRemarks = null,
 }) {
   const cleanIdType = idProofType || 'Aadhaar Card';
   const cleanAddrType = addressProofType || 'Aadhaar Card';
@@ -117,6 +118,16 @@ export function KycVerificationCard({
           );
         })}
       </div>
+
+      {verificationRemarks && (
+        <div className="mt-3.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-700 flex items-start gap-2">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+          <div>
+            <strong className="text-slate-900">Verification Remarks: </strong>
+            <span>{verificationRemarks}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

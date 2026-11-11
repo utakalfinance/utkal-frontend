@@ -4,6 +4,7 @@ export { API_BASE_URL, SERVER_BASE_URL, getBackendAssetUrl };
 
 export const apiConfig = {
   baseURL: API_BASE_URL,
+  baseUrl: API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

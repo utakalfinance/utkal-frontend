@@ -49,8 +49,13 @@ export const env = Object.freeze({
  * @returns {string} Fully qualified URL
  */
 export function getBackendAssetUrl(pathStr) {
-  if (!pathStr || typeof pathStr !== 'string') return '';
-  const trimmed = pathStr.trim();
+  if (!pathStr) return '';
+  let raw = pathStr;
+  if (typeof pathStr === 'object') {
+    raw = pathStr.url || pathStr.documentUrl || pathStr.previewUrl || pathStr.path || pathStr.filename || '';
+  }
+  if (!raw || typeof raw !== 'string') return '';
+  const trimmed = raw.trim();
   if (!trimmed || trimmed === '/' || trimmed === 'null' || trimmed === 'undefined') {
     return '';
   }
@@ -78,6 +83,11 @@ export function getBackendAssetUrl(pathStr) {
     if (filename) {
       return `${cleanApiUrl}/applications/files/${filename}`;
     }
+  }
+
+  // If it's a bare filename with an extension stored in uploads
+  if (/^[a-zA-Z0-9_\-.]+\.(pdf|jpg|jpeg|png|webp|gif|svg)$/i.test(trimmed)) {
+    return `${cleanApiUrl}/applications/files/${trimmed}`;
   }
 
   const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;

@@ -85,7 +85,7 @@ export function LoanCard({ loan, onApply }) {
           iconPosition="right"
           onClick={() => onApply(loan)}
         >
-          Apply Now
+          Apply for Loan
         </Button>
       </div>
     </div>

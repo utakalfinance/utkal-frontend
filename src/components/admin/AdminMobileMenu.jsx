@@ -14,7 +14,8 @@ import {
   LogOut,
   BookOpen,
   X,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Building2,
 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import brandLogo from '../../assets/image copy 7.png';
@@ -29,7 +30,7 @@ export function AdminMobileMenu({ isOpen, onClose }) {
   const handleLogout = () => {
     onClose();
     logoutAdmin();
-    navigate('/admin-login');
+    navigate('/login', { replace: true });
   };
 
   const isApplicationsActive = location.pathname.startsWith('/admin-dashboard/applications');
@@ -47,7 +48,6 @@ export function AdminMobileMenu({ isOpen, onClose }) {
     { label: 'Member Management', path: '/admin-dashboard/members', icon: Users },
     { label: 'Profile Update Requests', path: '/admin-dashboard/profile-updates', icon: UserCheck },
     { label: 'Documents & Audit', path: '/admin-dashboard/documents', icon: FolderCheck },
-    { label: 'Deposit Management', path: '/admin-dashboard/deposits', icon: PiggyBank },
     { label: 'Payments', path: '/admin-dashboard/payments', icon: CreditCard },
     {
       label: 'Notices & Circulars',
@@ -56,8 +56,7 @@ export function AdminMobileMenu({ isOpen, onClose }) {
       badge: unreadNoticesCount > 0 ? unreadNoticesCount : null,
       badgeColor: 'bg-blue-500 text-white font-black'
     },
-    { label: 'Gallery Management', path: '/admin-dashboard/gallery', icon: ImageIcon },
-    { label: 'Company Brochure', path: '/brochure', icon: BookOpen },
+    { label: 'District Management', path: '/admin-dashboard/districts', icon: Building2 },
     { label: 'Admin Profile & Settings', path: '/admin-dashboard/profile', icon: User },
   ];
 

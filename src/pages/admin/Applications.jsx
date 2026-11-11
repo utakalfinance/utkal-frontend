@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Download, CheckCircle2, XCircle, FileText, UserPlus, Filter } from 'lucide-react';
+import { Search, Download, CheckCircle2, XCircle, FileText, UserPlus, Filter, Trash2 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import { ApplicationTable } from '../../components/admin/ApplicationTable';
 import { EditApplicationModal } from '../../components/admin/EditApplicationModal';
 import { PaymentReceiptModal } from '../../components/admin/PaymentReceiptModal';
 
 export function Applications() {
-  const { applications, updateApplicationStatus, updateApplication, refreshData, markAllApplicationsAsSeen } = useAdmin();
+  const { applications, updateApplicationStatus, updateApplication, deleteApplication, refreshData, markAllApplicationsAsSeen } = useAdmin();
 
   useEffect(() => {
     if (typeof refreshData === 'function') {
@@ -107,14 +107,19 @@ export function Applications() {
 
       // Use MongoDB document _id
       const mongoId = selectedApp._id || selectedApp.id;
-      const targetStatus = actionType === 'Approve' ? 'approved' : 'rejected';
 
-      await updateApplicationStatus(mongoId, targetStatus);
-
-      if (actionType === 'Approve') {
-        setSuccessMessage('Application approved successfully.');
+      if (actionType === 'Delete') {
+        await deleteApplication(mongoId);
+        setSuccessMessage(`Application ${selectedApp.applicantName || selectedApp.id} was deleted successfully.`);
       } else {
-        setSuccessMessage(`Application ${actionType.toLowerCase()}d successfully.`);
+        const targetStatus = actionType === 'Approve' ? 'approved' : 'rejected';
+        await updateApplicationStatus(mongoId, targetStatus);
+
+        if (actionType === 'Approve') {
+          setSuccessMessage('Application approved successfully.');
+        } else {
+          setSuccessMessage(`Application ${actionType.toLowerCase()}d successfully.`);
+        }
       }
 
       setSelectedApp(null);
@@ -710,6 +715,7 @@ export function Applications() {
           onReject={(app) => handleOpenModal(app, 'Reject')}
           onEdit={(app) => setEditingApp(app)}
           onViewReceipt={(app) => setSelectedReceiptApp(app)}
+          onDelete={(app) => handleOpenModal(app, 'Delete')}
         />
       </div>
 
@@ -741,13 +747,15 @@ export function Applications() {
               >
                 {actionType === 'Approve' ? (
                   <CheckCircle2 className="w-6 h-6" />
+                ) : actionType === 'Delete' ? (
+                  <Trash2 className="w-6 h-6 text-rose-600" />
                 ) : (
                   <XCircle className="w-6 h-6" />
                 )}
               </div>
               <div>
                 <h3 className="text-lg font-black text-slate-900">
-                  {actionType} Application?
+                  {actionType === 'Delete' ? 'Delete Rejected Application?' : `${actionType} Application?`}
                 </h3>
                 <p className="text-xs text-slate-500 font-mono">
                   {selectedApp.id} • {selectedApp.applicantName}
@@ -755,9 +763,15 @@ export function Applications() {
               </div>
             </div>
 
-            <p className="text-xs text-slate-600 leading-relaxed font-normal">
-              Are you sure you want to <strong>{actionType.toLowerCase()}</strong> this statutory application? This will update member enrollment status immediately.
-            </p>
+            {actionType === 'Delete' ? (
+              <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                Are you sure you want to permanently delete this rejected application (<strong className="text-slate-900">{selectedApp.id}</strong> - <strong className="text-slate-900">{selectedApp.applicantName}</strong>)? This record and its attachments will be permanently removed from MongoDB.
+              </p>
+            ) : (
+              <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                Are you sure you want to <strong>{actionType.toLowerCase()}</strong> this statutory application? This will update member enrollment status immediately.
+              </p>
+            )}
 
             {errorMessage && (
               <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium">
@@ -794,7 +808,7 @@ export function Applications() {
                     <span>Processing...</span>
                   </>
                 ) : (
-                  <span>Confirm {actionType}</span>
+                  <span>{actionType === 'Delete' ? 'Confirm Delete' : `Confirm ${actionType}`}</span>
                 )}
               </button>
             </div>

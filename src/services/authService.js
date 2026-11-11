@@ -35,23 +35,40 @@ export async function memberLoginApi(credentials) {
 export async function getMemberProfileApi(token) {
   const authToken = token || localStorage.getItem('utkal_member_token');
   if (!authToken) {
-    throw new Error('No authentication token found');
+    const error = new Error('No authentication token found');
+    error.status = 401;
+    throw error;
   }
 
-  const response = await fetch(`${apiConfig.baseURL}/auth/me`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${authToken}`,
-    },
-  });
+  try {
+    const response = await fetch(`${apiConfig.baseURL}/auth/me`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+      },
+    });
 
-  const data = await response.json();
-  if (!response.ok || !data.success) {
-    throw new Error(data.message || 'Failed to fetch member profile');
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
+
+    if (!response.ok || !data || !data.success) {
+      const error = new Error(data?.message || `Failed to fetch member profile (HTTP ${response.status})`);
+      error.status = response.status;
+      throw error;
+    }
+
+    return data;
+  } catch (err) {
+    if (!err.status) {
+      err.status = 500;
+    }
+    throw err;
   }
-
-  return data;
 }
 
 /**

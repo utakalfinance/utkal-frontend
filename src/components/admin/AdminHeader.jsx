@@ -99,7 +99,7 @@ export function AdminHeader({ onToggleMobileMenu }) {
 
   const handleLogout = () => {
     logoutAdmin();
-    navigate('/admin-login');
+    navigate('/login', { replace: true });
   };
 
   const handleSearchSubmit = (e) => {

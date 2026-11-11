@@ -3,20 +3,72 @@ import { Navigate, useLocation, Outlet } from 'react-router-dom';
 import { isAdminAuthenticated, getAdminSession } from '../../auth/adminAuth';
 
 /**
- * ProtectedRoute component for securing Admin Dashboard routes.
- * Ensures the user has an active authenticated session with an 'admin' role.
- * Redirects unauthenticated users or non-admin sessions to /admin-login.
+ * Universal ProtectedRoute component for securing role-based dashboard routes:
+ * - super_admin / admin -> /admin-dashboard
+ * - district_admin -> /district-dashboard
+ * - member -> /member-dashboard
  */
-export function ProtectedRoute({ children }) {
+export function ProtectedRoute({ children, allowedRoles = ['admin', 'super_admin'] }) {
   const location = useLocation();
-  const authenticated = isAdminAuthenticated();
-  const session = getAdminSession();
-  
-  // Verify both authentication status AND admin role
-  const isRoleValid = !session || session.role === 'admin';
 
-  if (!authenticated || !isRoleValid) {
-    return <Navigate to="/admin-login" state={{ from: location }} replace />;
+  // 1. Check Super Admin session
+  const isSuperAdmin = isAdminAuthenticated();
+  const superAdminSession = getAdminSession();
+
+  // 2. Check District Admin session
+  const districtToken = localStorage.getItem('utkal_district_admin_token');
+  const districtUserRaw = localStorage.getItem('utkal_district_admin_user');
+  let districtUser = null;
+  try {
+    districtUser = districtUserRaw ? JSON.parse(districtUserRaw) : null;
+  } catch {}
+  const isDistrictAdmin = !!(districtToken && districtUser && districtUser.role === 'district_admin');
+
+  // 3. Check Member session
+  const memberToken = localStorage.getItem('utkal_member_token');
+  const memberUserRaw = localStorage.getItem('utkal_member_user');
+  let memberUser = null;
+  try {
+    memberUser = memberUserRaw ? JSON.parse(memberUserRaw) : null;
+  } catch {}
+  const isMember = !!(memberToken && memberUser && (memberUser.role === 'member' || !memberUser.role));
+
+  // Determine current active user role
+  let currentRole = null;
+  if (isSuperAdmin) {
+    currentRole = 'super_admin';
+  } else if (isDistrictAdmin) {
+    currentRole = 'district_admin';
+  } else if (isMember) {
+    currentRole = 'member';
+  }
+
+  // If not authenticated at all, redirect to appropriate login portal
+  if (!currentRole) {
+    if (allowedRoles.includes('district_admin') && !allowedRoles.includes('member') && !allowedRoles.includes('super_admin')) {
+      return <Navigate to="/district-admin/login" state={{ from: location }} replace />;
+    }
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Check role authorization
+  const isAuthorized =
+    allowedRoles.includes(currentRole) ||
+    ((currentRole === 'super_admin' || currentRole === 'admin') &&
+      (allowedRoles.includes('super_admin') || allowedRoles.includes('admin')));
+
+  if (!isAuthorized) {
+    // Redirect unauthorized user to their own proper dashboard
+    if (currentRole === 'district_admin') {
+      return <Navigate to="/district-dashboard" replace />;
+    }
+    if (currentRole === 'member') {
+      return <Navigate to="/member-dashboard" replace />;
+    }
+    if (currentRole === 'super_admin' || currentRole === 'admin') {
+      return <Navigate to="/admin-dashboard" replace />;
+    }
+    return <Navigate to="/login" replace />;
   }
 
   return children ? children : <Outlet />;

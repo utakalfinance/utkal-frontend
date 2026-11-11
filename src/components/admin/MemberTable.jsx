@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, UserX, UserCheck, Edit } from 'lucide-react';
+import { Eye, UserX, UserCheck, Edit, MapPin } from 'lucide-react';
 import { MemberStatusBadge } from './MemberStatusBadge';
 
 export function MemberTable({ members = [], onToggleStatus, onEdit }) {
@@ -25,7 +25,13 @@ export function MemberTable({ members = [], onToggleStatus, onEdit }) {
                   <span className="font-mono font-black text-[#0b1c3d] text-xs block">{memberId}</span>
                   <span className="text-[10px] text-blue-700 font-mono font-bold block mt-0.5">App ID: {appId}</span>
                 </div>
-                <MemberStatusBadge status={m.membershipStatus} />
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200/60">
+                    <MapPin className="w-2.5 h-2.5" />
+                    <span>{m.district || m.addressDetails?.district || m.addressDetails?.commDistrict || 'Odisha'}</span>
+                  </span>
+                  <MemberStatusBadge status={m.membershipStatus} />
+                </div>
               </div>
 
               <div className="space-y-1 text-xs">
@@ -104,6 +110,7 @@ export function MemberTable({ members = [], onToggleStatus, onEdit }) {
               <th className="py-3.5 px-4">MEMBER ID</th>
               <th className="py-3.5 px-4">APPLICATION ID</th>
               <th className="py-3.5 px-4">MEMBER NAME</th>
+              <th className="py-3.5 px-4">DISTRICT</th>
               <th className="py-3.5 px-4">EMAIL</th>
               <th className="py-3.5 px-4">MOBILE</th>
               <th className="py-3.5 px-4">JOINING DATE</th>
@@ -116,6 +123,7 @@ export function MemberTable({ members = [], onToggleStatus, onEdit }) {
               const memberId = m.memberId || m.id;
               const appId = m.applicationId || m.app?.id || 'NUF-1001';
               const name = m.applicantName || m.name;
+              const districtName = m.district || m.addressDetails?.district || m.addressDetails?.commDistrict || 'Odisha Circle';
 
               return (
                 <tr
@@ -126,6 +134,12 @@ export function MemberTable({ members = [], onToggleStatus, onEdit }) {
                   <td className="py-3.5 px-4 font-mono font-black text-[#0b1c3d]">{memberId}</td>
                   <td className="py-3.5 px-4 font-mono font-bold text-blue-700">{appId}</td>
                   <td className="py-3.5 px-4 font-bold text-slate-900">{name}</td>
+                  <td className="py-3.5 px-4">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200/60 text-[10px] font-bold">
+                      <MapPin className="w-2.5 h-2.5 text-blue-600 shrink-0" />
+                      <span>{districtName}</span>
+                    </span>
+                  </td>
                   <td className="py-3.5 px-4 font-mono text-slate-500 max-w-[160px] truncate">{m.email}</td>
                   <td className="py-3.5 px-4 font-mono">{m.mobile}</td>
                   <td className="py-3.5 px-4 text-slate-500">{m.joiningDate}</td>

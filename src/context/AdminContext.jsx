@@ -13,6 +13,7 @@ import {
   getDocumentsApi,
   updateApplicationStatusApi,
   updateApplicationApi,
+  deleteApplicationApi,
   resendCredentialsApi,
 } from '../services/applicationService';
 import {
@@ -30,6 +31,7 @@ import {
   isAdminAuthenticated,
   adminLogin as authAdminLogin,
   adminLogout as authAdminLogout,
+  ensureAdminToken,
 } from '../auth/adminAuth';
 import {
   getDeposits,
@@ -211,33 +213,34 @@ function normalizeApplication(app) {
     applicantName,
     email: c.email || app.email || '',
     mobile: c.mobile || app.mobile || '',
-    altMobile: app.altMobile || '9437112233',
-    title: p.title || app.title || 'Mr.',
+    altMobile: c.alternateMobile || c.altMobile || app.altMobile || '',
+    title: p.title || app.title || '',
     firstName: p.firstName || app.firstName || '',
     middleName: p.middleName || app.middleName || '',
     lastName: p.lastName || app.lastName || '',
-    relationshipPrefix: p.relationshipPrefix || app.relationshipPrefix || 'S/o.',
-    fatherLegalName: p.fatherLegalName || app.fatherLegalName || 'Legal Guardian',
-    dob: p.dob || app.dob || '1996-06-20',
-    age: p.age || app.age || '30',
-    gender: p.gender || app.gender || 'Male',
-    maritalStatus: p.maritalStatus || app.maritalStatus || 'Married',
-    religion: p.religion || app.religion || 'Hindu',
-    category: p.category || app.category || 'General',
-    education: p.education || app.education || 'Graduate / P.G.',
-    occupation: p.occupation || app.occupation || 'Business',
-    address1: a.address1 || app.address1 || 'Plot 214, Saheed Nagar',
-    villageTown: a.villageTown || app.villageTown || 'Bhubaneswar',
+    relationshipPrefix: p.relationshipPrefix || app.relationshipPrefix || '',
+    fatherLegalName: p.fatherLegalName || p.guardianName || app.fatherLegalName || '',
+    dob: p.dob || app.dob || '',
+    age: p.age || app.age || '',
+    gender: p.gender || app.gender || '',
+    maritalStatus: p.maritalStatus || app.maritalStatus || '',
+    religion: p.religion || app.religion || '',
+    category: p.category || app.category || '',
+    education: p.education || app.education || '',
+    occupation: p.occupation || app.occupation || '',
+    address1: a.address1 || app.address1 || '',
+    address2: a.address2 || app.address2 || '',
+    villageTown: a.villageTown || app.villageTown || '',
     district: a.district || app.district || 'Khurda',
     state: a.state || app.state || 'Odisha',
-    pincode: a.pincode || app.pincode || '751007',
+    pincode: a.pincode || app.pincode || '',
     sameAsResidential: a.sameAsResidential !== false,
     branch: a.district ? `${a.district} Branch` : app.branch || 'Bhubaneswar HQ (Nayapalli, IRC Village)',
-    introducer: app.introducer || 'Pradeep Kumar Jena',
-    nomineeName: n.fullName || app.nomineeName || 'Nominee Beneficiary',
-    nomineeRel: n.relationship || app.nomineeRel || 'Spouse',
-    nomineeDob: n.dob || app.nomineeDob || '1998-04-15',
-    nomineeAddr: n.address || app.nomineeAddr || 'Same as Applicant Address',
+    introducer: app.introducer || '',
+    nomineeName: n.fullName || app.nomineeName || '',
+    nomineeRel: n.relationship || app.nomineeRel || '',
+    nomineeDob: n.dob || app.nomineeDob || '',
+    nomineeAddr: n.address || app.nomineeAddr || '',
     numberOfShares: m.numberOfShares || app.numberOfShares || 10,
     shareValue: m.shareValue || app.shareValue || 10,
     processingFee: m.processingFee || app.processingFee || 100,
@@ -253,15 +256,18 @@ function normalizeApplication(app) {
     addressProof: addressProofUrl,
     photoUrl,
     photoFile: photoUrl,
+    photo: photoUrl,
+    doc1_photo: photoUrl,
     signatureUrl,
     signatureFile: signatureUrl,
+    signature: signatureUrl,
     doc3_eduCert,
     doc4_birthCert,
     doc5_utility,
     additionalDocuments,
     documentDetails: sanitizedDocDetails,
     documents: sanitizedDocDetails,
-    witness1Name: w.witness1Name || app.witness1Name || 'Rajesh Kumar Swain',
+    witness1Name: w.witness1Name || app.witness1Name || '',
     witness1Mobile: w.witness1Mobile || app.witness1Mobile || '9861001122',
     witness1Address: w.witness1Address || app.witness1Address || 'Bhubaneswar, Odisha',
     witness2Name: w.witness2Name || app.witness2Name || 'Manas Ranjan Rout',
@@ -526,57 +532,49 @@ export const AdminProvider = ({ children }) => {
     return !hasBeenSeen;
   }).length;
 
-  const refreshData = useCallback(async () => {
-    let currentApps = [];
+  const isRefreshingRef = useRef(false);
+  const lastRefreshTimeRef = useRef(0);
+
+  const refreshData = useCallback(async (force = false) => {
+    // Prevent overlapping simultaneous requests
+    if (isRefreshingRef.current) return;
+    const now = Date.now();
+    if (!force && now - lastRefreshTimeRef.current < 10000) return;
+
+    isRefreshingRef.current = true;
+    lastRefreshTimeRef.current = now;
+
     try {
-      const apiApps = await getApplicationsApi();
-      if (Array.isArray(apiApps)) {
-        currentApps = apiApps.map(normalizeApplication);
+      const [appsRes, membersRes, paymentsRes] = await Promise.allSettled([
+        getApplicationsApi(),
+        getMembersApi(),
+        getPaymentsApi(),
+      ]);
+
+      let currentApps = [];
+      if (appsRes.status === 'fulfilled' && Array.isArray(appsRes.value)) {
+        currentApps = appsRes.value.map(normalizeApplication);
         setApplications(currentApps);
       } else {
         currentApps = getApplications().map(normalizeApplication);
         setApplications(currentApps);
       }
-    } catch (err) {
-      console.warn('API fetch failed, falling back to local storage:', err.message);
-      currentApps = getApplications().map(normalizeApplication);
-      setApplications(currentApps);
-    }
 
-    try {
-      const apiDocs = await getDocumentsApi();
-      if (Array.isArray(apiDocs)) {
-        setDocuments(apiDocs);
-      } else {
-        setDocuments(getDocuments());
-      }
-    } catch (err) {
-      console.warn('API documents fetch failed, falling back to local storage:', err.message);
-      setDocuments(getDocuments());
-    }
-
-    try {
-      const apiMembers = await getMembersApi();
-      if (Array.isArray(apiMembers)) {
-        setMembers(apiMembers);
+      if (membersRes.status === 'fulfilled' && Array.isArray(membersRes.value)) {
+        setMembers(membersRes.value);
       } else {
         setMembers(getMembers());
       }
-    } catch (err) {
-      console.warn('API members fetch failed, falling back to local storage:', err.message);
-      setMembers(getMembers());
-    }
 
-    try {
-      const apiPayments = await getPaymentsApi();
-      if (Array.isArray(apiPayments)) {
-        setPayments(apiPayments);
+      if (paymentsRes.status === 'fulfilled' && Array.isArray(paymentsRes.value)) {
+        setPayments(paymentsRes.value);
       } else {
         setPayments(getPayments(currentApps));
       }
     } catch (err) {
-      console.warn('API payments fetch failed, falling back to local storage:', err.message);
-      setPayments(getPayments(currentApps));
+      console.warn('Concurrent refresh error:', err?.message);
+    } finally {
+      isRefreshingRef.current = false;
     }
 
     setDeposits(getDeposits());
@@ -584,8 +582,24 @@ export const AdminProvider = ({ children }) => {
     setNotices(getNotices());
   }, []);
 
+  const refreshDocuments = useCallback(async () => {
+    try {
+      const docs = await getDocumentsApi();
+      if (Array.isArray(docs)) {
+        setDocuments(docs);
+        try {
+          sessionStorage.setItem('admin_documents_cache', JSON.stringify(docs));
+        } catch (e) {}
+        return docs;
+      }
+    } catch (err) {
+      console.warn('Documents refresh notice:', err?.message);
+    }
+    return null;
+  }, []);
+
   useEffect(() => {
-    refreshData();
+    refreshData(true);
 
     const handleStorageChange = () => {
       refreshData();
@@ -596,23 +610,37 @@ export const AdminProvider = ({ children }) => {
       } catch (e) {}
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('focus', refreshData);
+    const handleWindowFocus = () => {
+      // Throttle window focus refresh to at most once per 20 seconds
+      if (Date.now() - lastRefreshTimeRef.current > 20000) {
+        refreshData();
+      }
+    };
 
-    // Auto poll backend every 5 seconds for new application submissions
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('focus', handleWindowFocus);
+
+    // Auto poll backend every 30 seconds for new submissions (sensible interval)
     const pollInterval = setInterval(() => {
       refreshData();
-    }, 5000);
+    }, 30000);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('focus', refreshData);
+      window.removeEventListener('focus', handleWindowFocus);
       clearInterval(pollInterval);
     };
   }, [refreshData]);
 
-  const loginAdmin = (email, password) => {
-    const res = authAdminLogin(email, password);
+  // Ensure admin JWT token is active whenever admin session is authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      ensureAdminToken().catch(() => {});
+    }
+  }, [isAuthenticated]);
+
+  const loginAdmin = (email, password, token = null) => {
+    const res = authAdminLogin(email, password, token);
     if (res.success) {
       setIsAuthenticated(true);
     }
@@ -655,7 +683,8 @@ export const AdminProvider = ({ children }) => {
     const freshPayments = getPayments(updatedApps);
     setPayments(freshPayments);
 
-    await refreshData();
+    // Refresh data in background without blocking the UI approval modal
+    refreshData().catch((err) => console.warn('Background refresh error:', err?.message));
     window.dispatchEvent(new Event('storage'));
     return apiResult;
   };
@@ -693,6 +722,24 @@ export const AdminProvider = ({ children }) => {
     const storageResult = storageUpdateApplicationRecord(target?.id || idOrMongoId, updatedData);
     await refreshData();
     return apiResult || { success: true, application: storageResult };
+  };
+
+  const deleteApplication = async (idOrMongoId) => {
+    const target = applications.find(
+      (a) => a._id === idOrMongoId || a.id === idOrMongoId || a.applicationId === idOrMongoId
+    );
+    const mongoId = target?._id || idOrMongoId;
+
+    const apiResult = await deleteApplicationApi(mongoId);
+
+    // Remove from in-memory state immediately
+    setApplications((prev) =>
+      prev.filter((app) => app._id !== mongoId && app.id !== idOrMongoId && app.applicationId !== idOrMongoId)
+    );
+
+    // Refresh remaining state in background
+    refreshData().catch((err) => console.warn('Background refresh error after deletion:', err?.message));
+    return apiResult;
   };
 
   const updateMemberStatus = async (id, newStatus) => {
@@ -886,6 +933,7 @@ export const AdminProvider = ({ children }) => {
         galleryItems,
         teamMembers,
         updateApplication,
+        deleteApplication,
         updateApplicationStatus,
         resendCredentials,
         updateMemberStatus,
@@ -899,6 +947,7 @@ export const AdminProvider = ({ children }) => {
         createNewTransaction,
         updateTransactionRecord,
         refreshData,
+        refreshDocuments,
         verifyDocument,
         createNewNotice,
         updateNoticeRecord,

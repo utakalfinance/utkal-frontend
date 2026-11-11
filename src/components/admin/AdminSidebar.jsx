@@ -14,7 +14,9 @@ import {
   LogOut,
   BookOpen,
   FileSpreadsheet,
-  ChevronRight
+  ChevronRight,
+  Building2,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import brandLogo from '../../assets/image copy 7.png';
@@ -71,7 +73,7 @@ export function AdminSidebar() {
 
   const handleLogout = () => {
     logoutAdmin();
-    navigate('/admin-login');
+    navigate('/login', { replace: true });
   };
 
   const menuSections = [
@@ -94,7 +96,6 @@ export function AdminSidebar() {
     {
       title: 'FINANCIAL SERVICES',
       items: [
-        { label: 'Deposits', path: '/admin-dashboard/deposits', icon: PiggyBank },
         { label: 'Payments', path: '/admin-dashboard/payments', icon: CreditCard },
       ],
     },
@@ -102,13 +103,12 @@ export function AdminSidebar() {
       title: 'COMMUNICATION & MEDIA',
       items: [
         { label: 'Notices & Circulars', path: '/admin-dashboard/notices', icon: Bell, badge: activeNotices > 0 ? activeNotices : null, badgeColor: 'bg-blue-500 text-white' },
-        { label: 'Gallery', path: '/admin-dashboard/gallery', icon: ImageIcon },
-        { label: 'Company Brochure', path: '/brochure', icon: BookOpen },
       ],
     },
     {
       title: 'ADMINISTRATION',
       items: [
+        { label: 'District Management', path: '/admin-dashboard/districts', icon: Building2 },
         { label: 'Admin Profile', path: '/admin-dashboard/profile', icon: User },
       ],
     },

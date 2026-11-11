@@ -46,7 +46,7 @@ export function MemberDashboardLayout() {
     navigate('/login');
   };
 
-  if (isLoading) {
+  if (isLoading && !memberUser) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-slate-900 text-white">
         <div className="text-center space-y-3">
@@ -60,9 +60,9 @@ export function MemberDashboardLayout() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-slate-100 flex text-slate-900 font-sans antialiased">
+    <div className="h-screen w-screen overflow-hidden bg-gradient-to-br from-[#F8FAFC] via-[#F0F5FA] to-[#E8EFF7] flex text-slate-900 font-sans antialiased">
       {/* DESKTOP SIDEBAR */}
-      <aside className="hidden lg:block w-64 xl:w-72 shrink-0 h-full bg-[#0B1528] z-20 overflow-hidden">
+      <aside className="hidden lg:block w-64 xl:w-72 shrink-0 h-full bg-[#0A1628] z-20 overflow-hidden shadow-xl">
         <MemberSidebar
           memberUser={memberUser}
           onChangePassword={() => setChangePasswordOpen(true)}

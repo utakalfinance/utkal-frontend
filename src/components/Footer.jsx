@@ -13,10 +13,14 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { StatutoryPdfModal } from './common/StatutoryPdfModal';
+import { useMemberAuth } from '../context/MemberAuthContext';
+import { useAdmin } from '../context/AdminContext';
 
 export function Footer({ onOpenApplyModal }) {
   const [showDisclosures, setShowDisclosures] = useState(false);
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
+  const { isAuthenticated: isMember } = useMemberAuth();
+  const { isAuthenticated: isAdmin } = useAdmin();
 
   return (
     <footer className="bg-[#070D18] text-slate-300 font-sans border-t border-slate-900 selection:bg-blue-600 selection:text-white">
@@ -155,14 +159,26 @@ export function Footer({ onOpenApplyModal }) {
               <li><button type="button" onClick={() => setPdfModalOpen(true)} className="hover:text-blue-400 transition-colors cursor-pointer text-left">Download Statutory Forms</button></li>
               <li><Link to="/contact" className="hover:text-blue-400 transition-colors">Grievance Redressal Officer</Link></li>
               <li>
-                <Link to="/member-login" className="text-blue-400 hover:text-blue-300 font-bold transition-colors">
-                  Member Portal Login
-                </Link>
+                {isMember ? (
+                  <Link to="/member-dashboard" className="text-blue-400 hover:text-blue-300 font-bold transition-colors">
+                    Member Dashboard
+                  </Link>
+                ) : (
+                  <Link to="/login" className="text-blue-400 hover:text-blue-300 font-bold transition-colors">
+                    Member Portal Login
+                  </Link>
+                )}
               </li>
               <li>
-                <Link to="/admin" className="text-amber-400 hover:text-amber-300 font-bold transition-colors">
-                  Admin Governance Portal
-                </Link>
+                {isAdmin ? (
+                  <Link to="/admin-dashboard" className="text-amber-400 hover:text-amber-300 font-bold transition-colors">
+                    Admin Governance Portal
+                  </Link>
+                ) : (
+                  <Link to="/login" className="text-amber-400 hover:text-amber-300 font-bold transition-colors">
+                    Admin Governance Login
+                  </Link>
+                )}
               </li>
             </ul>
           </div>

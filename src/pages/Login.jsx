@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Lock,
@@ -13,6 +13,7 @@ import brandLogo from '../assets/image copy 7.png';
 
 import { useMemberAuth } from '../hooks/useMemberAuth';
 import { useAdmin } from '../context/AdminContext';
+import { setAdminToken } from '../auth/adminAuth';
 
 /**
  * Single Unified Portal Login Page (/login)
@@ -20,8 +21,24 @@ import { useAdmin } from '../context/AdminContext';
  */
 export function Login() {
   const navigate = useNavigate();
-  const { login } = useMemberAuth();
-  const { loginAdmin } = useAdmin();
+  const { login, isAuthenticated: isMember, isLoading: memberLoading, memberUser } = useMemberAuth();
+  const { loginAdmin, logoutAdmin, isAuthenticated: isAdmin } = useAdmin();
+
+  // If already authenticated as active member, district admin, or super admin, automatically redirect to their dashboard
+  useEffect(() => {
+    const districtToken = localStorage.getItem('utkal_district_admin_token');
+    if (isAdmin) {
+      navigate('/admin-dashboard', { replace: true });
+    } else if (districtToken) {
+      navigate('/district-dashboard', { replace: true });
+    } else if (
+      isMember &&
+      !['admin', 'super_admin', 'district_admin'].includes(memberUser?.role) &&
+      memberUser?.status === 'active'
+    ) {
+      navigate('/member-dashboard', { replace: true });
+    }
+  }, [isAdmin, isMember, memberUser, navigate]);
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -30,6 +47,25 @@ export function Login() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
+
+  // If already authenticated, show brief transition spinner
+  const hasDistrictSession = typeof window !== 'undefined' && !!localStorage.getItem('utkal_district_admin_token');
+  if (
+    isAdmin ||
+    hasDistrictSession ||
+    (isMember && !['admin', 'super_admin', 'district_admin'].includes(memberUser?.role) && memberUser?.status === 'active')
+  ) {
+    return (
+      <div className="min-h-screen bg-[#0B1528] flex items-center justify-center text-white">
+        <div className="text-center space-y-3">
+          <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+            Redirecting to your dashboard...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,13 +89,53 @@ export function Login() {
       const res = await login(cleanIdentifier, password);
 
       // 2. Automatically navigate according to role returned by backend
-      if (res && (res.role === 'admin' || res.user?.role === 'admin')) {
-        if (loginAdmin) {
-          loginAdmin(cleanIdentifier, password);
+      const resolvedRole = res?.role || res?.user?.role || 'member';
+
+      if (resolvedRole === 'admin' || resolvedRole === 'super_admin') {
+        try {
+          localStorage.removeItem('utkal_district_admin_token');
+          localStorage.removeItem('utkal_district_admin_user');
+          localStorage.removeItem('utkal_member_token');
+          localStorage.removeItem('utkal_member_user');
+        } catch {}
+
+        if (res.token) {
+          setAdminToken(res.token);
         }
-        navigate('/admin-dashboard');
+        if (loginAdmin) {
+          loginAdmin(cleanIdentifier, password, res.token);
+        }
+        navigate('/admin-dashboard', { replace: true });
+      } else if (resolvedRole === 'district_admin') {
+        try {
+          localStorage.removeItem('utkal_finance_admin_auth');
+          localStorage.removeItem('nuf_admin_auth');
+          localStorage.removeItem('adminSession');
+          localStorage.removeItem('utkal_admin_token');
+          localStorage.removeItem('utkal_member_token');
+          localStorage.removeItem('utkal_member_user');
+        } catch {}
+
+        if (res.token) {
+          localStorage.setItem('utkal_district_admin_token', res.token);
+          localStorage.setItem('token', res.token);
+          localStorage.setItem('utkal_admin_token', res.token);
+        }
+        if (res.user) {
+          localStorage.setItem('utkal_district_admin_user', JSON.stringify(res.user));
+          localStorage.setItem('user', JSON.stringify(res.user));
+        }
+        navigate('/district-dashboard', { replace: true });
       } else {
-        navigate('/member-dashboard');
+        try {
+          localStorage.removeItem('utkal_finance_admin_auth');
+          localStorage.removeItem('nuf_admin_auth');
+          localStorage.removeItem('adminSession');
+          localStorage.removeItem('utkal_admin_token');
+          localStorage.removeItem('utkal_district_admin_token');
+          localStorage.removeItem('utkal_district_admin_user');
+        } catch {}
+        navigate('/member-dashboard', { replace: true });
       }
     } catch (err) {
       console.error('Login error:', err);
