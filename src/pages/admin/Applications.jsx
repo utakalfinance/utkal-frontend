@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, Download, CheckCircle2, XCircle, FileText, UserPlus, Filter, Trash2 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import { ApplicationTable } from '../../components/admin/ApplicationTable';
 import { EditApplicationModal } from '../../components/admin/EditApplicationModal';
 import { PaymentReceiptModal } from '../../components/admin/PaymentReceiptModal';
+import { getDistrictsApi } from '../../services/districtService';
 
 export function Applications() {
   const { applications, updateApplicationStatus, updateApplication, deleteApplication, refreshData, markAllApplicationsAsSeen } = useAdmin();
@@ -21,6 +22,7 @@ export function Applications() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const [selectedBranch, setSelectedBranch] = useState('All Branches');
+  const [createdDistricts, setCreatedDistricts] = useState([]);
   const [selectedApp, setSelectedApp] = useState(null);
   const [selectedReceiptApp, setSelectedReceiptApp] = useState(null);
   const [editingApp, setEditingApp] = useState(null);
@@ -28,6 +30,91 @@ export function Applications() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Fetch all branches/districts created in the system
+  useEffect(() => {
+    let isMounted = true;
+    const fetchDistricts = async () => {
+      try {
+        const data = await getDistrictsApi();
+        if (isMounted && data && Array.isArray(data.districts)) {
+          setCreatedDistricts(data.districts);
+        }
+      } catch (err) {
+        console.warn('Unable to load created branches/districts:', err);
+      }
+    };
+    fetchDistricts();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Set all branches according to created (chronological creation order)
+  const availableBranches = useMemo(() => {
+    // Sort created districts chronologically according to when they were created
+    const sortedDistricts = [...createdDistricts].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeA - timeB;
+    });
+
+    const list = [];
+    const seen = new Set();
+
+    const formatLabel = (name) => {
+      if (!name) return '';
+      const trimmed = name.trim();
+      const capitalized = trimmed
+        .split(/\s+/)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+      if (/branch|hq|headquarters|circle|office/i.test(capitalized)) {
+        return capitalized;
+      }
+      return `${capitalized} Branch`;
+    };
+
+    // 1. Add all branches from created districts in creation order
+    sortedDistricts.forEach((d) => {
+      const rawName = d.name || '';
+      const label = formatLabel(rawName);
+      const key = label.toLowerCase();
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        list.push({
+          id: d._id || d.code || key,
+          label: label,
+          value: label,
+          rawName: rawName,
+          code: d.code || '',
+          createdAt: d.createdAt,
+        });
+      }
+    });
+
+    // 2. Also include any distinct branch from applications that wasn't in districts table
+    applications.forEach((app) => {
+      const appBranch = app.branch || (app.district ? `${app.district} Branch` : '');
+      if (appBranch) {
+        const label = formatLabel(appBranch);
+        const key = label.toLowerCase();
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          list.push({
+            id: `app-${key}`,
+            label: label,
+            value: label,
+            rawName: app.district || appBranch,
+            code: '',
+            createdAt: app.createdAt || null,
+          });
+        }
+      }
+    });
+
+    return list;
+  }, [createdDistricts, applications]);
 
 
   // Calculate Stat Counts (case-insensitive & distinct)
@@ -85,8 +172,26 @@ export function Applications() {
     }
 
     let matchesBranch = true;
-    if (selectedBranch !== 'All Branches') {
-      matchesBranch = (app.branch || '').toLowerCase().includes(selectedBranch.toLowerCase());
+    if (selectedBranch && selectedBranch !== 'All Branches') {
+      const target = selectedBranch.toLowerCase().trim();
+      const appBranch = (app.branch || '').toLowerCase().trim();
+      const appDistrict = (app.district || '').toLowerCase().trim();
+
+      const cleanTarget = target.replace(/\b(branch|hq|headquarters|circle|office)\b/gi, '').trim();
+      const cleanBranch = appBranch.replace(/\b(branch|hq|headquarters|circle|office)\b/gi, '').trim();
+      const cleanDistrict = appDistrict.replace(/\b(branch|hq|headquarters|circle|office)\b/gi, '').trim();
+
+      matchesBranch =
+        appBranch.includes(target) ||
+        target.includes(appBranch) ||
+        appDistrict.includes(target) ||
+        target.includes(appDistrict) ||
+        (cleanTarget.length > 1 && (
+          cleanBranch.includes(cleanTarget) ||
+          cleanTarget.includes(cleanBranch) ||
+          cleanDistrict.includes(cleanTarget) ||
+          cleanTarget.includes(cleanDistrict)
+        ));
     }
 
     return matchesSearch && matchesStatus && matchesBranch;
@@ -699,11 +804,11 @@ export function Applications() {
               className="w-full sm:w-auto bg-slate-50 text-slate-800 text-xs font-bold rounded-xl px-3 py-2 border border-slate-200 focus:border-blue-600 focus:outline-none transition-all cursor-pointer"
             >
               <option value="All Branches">All Branches</option>
-              <option value="Bhubaneswar">Bhubaneswar HQ</option>
-              <option value="Cuttack">Cuttack Branch</option>
-              <option value="Berhampur">Berhampur Branch</option>
-              <option value="Rourkela">Rourkela Branch</option>
-              <option value="Sambalpur">Sambalpur Branch</option>
+              {availableBranches.map((b) => (
+                <option key={b.id} value={b.label}>
+                  {b.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -711,6 +816,7 @@ export function Applications() {
         {/* APPLICATION TABLE */}
         <ApplicationTable
           applications={filtered}
+          districts={createdDistricts}
           onApprove={(app) => handleOpenModal(app, 'Approve')}
           onReject={(app) => handleOpenModal(app, 'Reject')}
           onEdit={(app) => setEditingApp(app)}
@@ -831,6 +937,7 @@ export function Applications() {
       <EditApplicationModal
         isOpen={!!editingApp}
         application={editingApp}
+        districts={createdDistricts}
         onClose={() => setEditingApp(null)}
         onSave={handleSaveEdit}
       />

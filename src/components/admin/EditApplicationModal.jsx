@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -28,9 +28,10 @@ import {
 } from 'lucide-react';
 import { getBackendAssetUrl } from '../../config/env';
 import { uploadDocumentsApi } from '../../services/applicationService';
+import { getDistrictsApi } from '../../services/districtService';
 import { ZoomableImageViewer } from '../common/ZoomableImageViewer';
 
-export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
+export function EditApplicationModal({ isOpen, application, onClose, onSave, districts: propDistricts = [] }) {
   const [activeSection, setActiveSection] = useState('personal');
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingFields, setUploadingFields] = useState({});
@@ -38,6 +39,23 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
   const [previewDoc, setPreviewDoc] = useState(null);
   const scrollContainerRef = useRef(null);
   const lastLoadedAppIdRef = useRef(null);
+  const [districtList, setDistrictList] = useState(propDistricts);
+
+  useEffect(() => {
+    if (propDistricts && propDistricts.length > 0) {
+      setDistrictList(propDistricts);
+    } else {
+      getDistrictsApi()
+        .then((res) => {
+          if (res && Array.isArray(res.districts)) {
+            setDistrictList(res.districts);
+          }
+        })
+        .catch((err) => {
+          console.warn('Failed to load districts in EditApplicationModal:', err);
+        });
+    }
+  }, [propDistricts]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -804,6 +822,53 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
     );
   };
 
+  // Set all branches according to created (chronological creation order)
+  const branchOptions = useMemo(() => {
+    const sorted = [...districtList].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeA - timeB;
+    });
+
+    const formatLabel = (name) => {
+      if (!name) return '';
+      const trimmed = name.trim();
+      const capitalized = trimmed
+        .split(/\s+/)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+      if (/branch|hq|headquarters|circle|office/i.test(capitalized)) {
+        return capitalized;
+      }
+      return `${capitalized} Branch`;
+    };
+
+    const options = [];
+    const seen = new Set();
+
+    sorted.forEach((d) => {
+      const label = formatLabel(d.name);
+      const key = label.toLowerCase();
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        options.push(label);
+      }
+    });
+
+    // Make sure formData.branch or current application.branch is preserved in the options if not already present
+    const currentBranch = formData.branch || application?.branch;
+    if (currentBranch && !seen.has(currentBranch.toLowerCase())) {
+      options.push(currentBranch);
+      seen.add(currentBranch.toLowerCase());
+    }
+
+    if (options.length === 0) {
+      options.push('Bhubaneswar HQ (Nayapalli, IRC Village)');
+    }
+
+    return options;
+  }, [districtList, formData.branch, application?.branch]);
+
   const handleClose = () => {
     lastLoadedAppIdRef.current = null;
     onClose();
@@ -1329,16 +1394,20 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave }) {
                     Assigned Branch
                   </label>
                   <select
-                    value={formData.branch}
+                    value={
+                      branchOptions.find((opt) => opt.toLowerCase() === (formData.branch || '').toLowerCase()) ||
+                      formData.branch ||
+                      branchOptions[0] ||
+                      ''
+                    }
                     onChange={(e) => handleChange('branch', e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-semibold focus:bg-white focus:border-blue-600 focus:outline-none"
                   >
-                    <option value="Bhubaneswar HQ (Nayapalli, IRC Village)">Bhubaneswar HQ (Nayapalli, IRC Village)</option>
-                    <option value="Cuttack Main Branch (Badambadi)">Cuttack Main Branch (Badambadi)</option>
-                    <option value="Berhampur Regional Branch">Berhampur Regional Branch</option>
-                    <option value="Rourkela Steel City Branch">Rourkela Steel City Branch</option>
-                    <option value="Sambalpur Branch">Sambalpur Branch</option>
-                    <option value="Balasore Branch">Balasore Branch</option>
+                    {branchOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
                   </select>
                 </div>
 

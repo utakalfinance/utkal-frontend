@@ -2,8 +2,30 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, CheckCircle2, XCircle, Clock, Edit, FileText, Image as ImageIcon, Trash2 } from 'lucide-react';
 
-export function ApplicationTable({ applications, onApprove, onReject, onEdit, onViewReceipt, onDelete }) {
+export function ApplicationTable({
+  applications,
+  onApprove,
+  onReject,
+  onEdit,
+  onViewReceipt,
+  onDelete,
+  districts = [],
+}) {
   const navigate = useNavigate();
+
+  const getBranchCode = (app) => {
+    if (app.branchCode) return app.branchCode;
+    if (app.districtCode) return app.districtCode;
+    if (districts && districts.length > 0) {
+      const branchText = `${app.branch || ''} ${app.district || ''}`.toLowerCase();
+      const matched = districts.find((d) => {
+        const dName = (d.name || '').toLowerCase().trim();
+        return dName && branchText.includes(dName);
+      });
+      if (matched && matched.code) return matched.code;
+    }
+    return '075101';
+  };
 
   return (
     <div className="w-full">
@@ -79,6 +101,7 @@ export function ApplicationTable({ applications, onApprove, onReject, onEdit, on
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 block uppercase">Branch</span>
                   <span className="font-bold text-slate-800 text-[11px] truncate block">{app.branch || 'Bhubaneswar HQ'}</span>
+                  <span className="text-[9px] text-slate-400 font-mono block">Code: {getBranchCode(app)}</span>
                 </div>
               </div>
 
@@ -213,7 +236,7 @@ export function ApplicationTable({ applications, onApprove, onReject, onEdit, on
                   {/* 3. ASSIGNED BRANCH & CODE */}
                   <td className="py-3.5 px-4">
                     <div className="font-bold text-slate-800 text-xs">{app.branch || 'Bhubaneswar HQ (Nayapalli, IRC Village)'}</div>
-                    <div className="text-[10px] text-slate-400 font-mono mt-0.5">Code: 075101</div>
+                    <div className="text-[10px] text-slate-400 font-mono mt-0.5">Code: {getBranchCode(app)}</div>
                   </td>
 
                   {/* 4. SHARE & FEE & RECEIPT */}
