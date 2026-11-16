@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { DashboardStats } from '../../components/admin/DashboardStats';
 import { LoanStats } from '../../components/admin/LoanStats';
-import { DistrictPerformance } from '../../components/admin/DistrictPerformance';
 import { RecentLoanActivities } from '../../components/admin/RecentLoanActivities';
 import { RecentApplications } from '../../components/admin/RecentApplications';
 import { PendingFinalApprovalsTable } from '../../components/admin/loans/PendingFinalApprovalsTable';
@@ -191,7 +190,7 @@ export function AdminDashboard() {
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 font-medium">
-            Executive Command Center • Centralized statutory oversight, credit portfolio, and district performance.
+            Executive Command Center • Centralized statutory oversight and credit portfolio.
           </p>
         </div>
 
@@ -240,12 +239,7 @@ export function AdminDashboard() {
         />
       </div>
 
-      {/* SECTION 3: DISTRICT PERFORMANCE (REAL BACKEND DATA) */}
-      <div className="space-y-3">
-        <DistrictPerformance applications={applications} members={members} />
-      </div>
-
-      {/* SECTION 4: RECENT LOAN ACTIVITIES + STATUTORY LIFECYCLE BREAKDOWN */}
+      {/* SECTION 3: RECENT LOAN ACTIVITIES + STATUTORY LIFECYCLE BREAKDOWN */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         {/* RECENT LOAN ACTIVITIES (Requirement 5 & 8 - WITH REAL DATA) */}
         <RecentLoanActivities loanActivities={formattedLoanActivities} />
