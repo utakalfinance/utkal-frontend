@@ -37,6 +37,7 @@ import { LoanApprovals } from '../pages/admin/LoanApprovals';
 import { LoanDisbursement } from '../pages/admin/LoanDisbursement';
 import { AllDistrictApplications } from '../pages/admin/AllDistrictApplications';
 import { DistrictUnifiedManagement } from '../pages/admin/DistrictUnifiedManagement';
+import { InvestorManagement } from '../pages/admin/InvestorManagement';
 import { DistrictDashboardLayout } from '../pages/district/DistrictDashboardLayout';
 import { DistrictDashboardHome } from '../pages/district/DistrictDashboardHome';
 import { DistrictAssociateManagement } from '../pages/district/DistrictAssociateManagement';
@@ -148,6 +149,12 @@ export function AppRoutes() {
         <Route path="admin/transactions" element={<Navigate to="/admin-dashboard/transactions" replace />} />
         <Route path="admin/notices" element={<Navigate to="/admin-dashboard/notices" replace />} />
         <Route path="admin/loan-enquiries" element={<Navigate to="/admin-dashboard/loans" replace />} />
+        <Route path="admin/investors" element={<Navigate to="/admin-dashboard/investors" replace />} />
+        <Route path="admin/investor" element={<Navigate to="/admin-dashboard/investors" replace />} />
+        <Route path="admin/investors/ledger" element={<Navigate to="/admin-dashboard/investors" replace />} />
+        <Route path="admin/investors/tracking2x" element={<Navigate to="/admin-dashboard/investors" replace />} />
+        <Route path="admin/investors/reports" element={<Navigate to="/admin-dashboard/investors" replace />} />
+        <Route path="admin/investors/*" element={<Navigate to="/admin-dashboard/investors" replace />} />
         <Route path="admin/districts" element={<Navigate to="/admin-dashboard/districts" replace />} />
         <Route path="admin/district-admins" element={<Navigate to="/admin-dashboard/district-admins" replace />} />
 
@@ -202,6 +209,19 @@ export function AppRoutes() {
           <Route path="district-admins" element={<DistrictUnifiedManagement />} />
           <Route path="deposits" element={<DepositManagement />} />
           <Route path="payments" element={<Payments />} />
+          <Route path="investors" element={<InvestorManagement />} />
+          <Route path="investors/overview" element={<Navigate to="/admin-dashboard/investors" replace />} />
+          <Route path="investors/ledger" element={<Navigate to="/admin-dashboard/investors" replace />} />
+          <Route path="investors/tracking2x" element={<Navigate to="/admin-dashboard/investors" replace />} />
+          <Route path="investors/2x-tracking" element={<Navigate to="/admin-dashboard/investors" replace />} />
+          <Route path="investors/reports" element={<Navigate to="/admin-dashboard/investors" replace />} />
+          <Route path="investors/financial-reports" element={<Navigate to="/admin-dashboard/investors" replace />} />
+          <Route path="investor-ledger" element={<Navigate to="/admin-dashboard/investors" replace />} />
+          <Route path="investor-tracking" element={<Navigate to="/admin-dashboard/investors" replace />} />
+          <Route path="investor-reports" element={<Navigate to="/admin-dashboard/investors" replace />} />
+          <Route path="investors/reconciliation" element={<Navigate to="/admin-dashboard/investors" replace />} />
+          <Route path="investors/fund-allocation" element={<Navigate to="/admin-dashboard/investors" replace />} />
+          <Route path="investors/*" element={<Navigate to="/admin-dashboard/investors" replace />} />
           <Route path="transactions" element={<Navigate to="/admin-dashboard/payments" replace />} />
           <Route path="documents" element={<Documents />} />
           <Route path="notices" element={<NoticesManagement />} />

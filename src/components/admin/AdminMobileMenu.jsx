@@ -16,6 +16,7 @@ import {
   X,
   FileSpreadsheet,
   Building2,
+  TrendingUp,
 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import brandLogo from '../../assets/image copy 7.png';
@@ -49,6 +50,7 @@ export function AdminMobileMenu({ isOpen, onClose }) {
     { label: 'Profile Update Requests', path: '/admin-dashboard/profile-updates', icon: UserCheck },
     { label: 'Documents & Audit', path: '/admin-dashboard/documents', icon: FolderCheck },
     { label: 'Payments', path: '/admin-dashboard/payments', icon: CreditCard },
+    { label: 'Investor Management', path: '/admin-dashboard/investors', icon: TrendingUp },
     {
       label: 'Notices & Circulars',
       path: '/admin-dashboard/notices',

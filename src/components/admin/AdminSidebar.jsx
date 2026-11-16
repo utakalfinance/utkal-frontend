@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Building2,
   ShieldCheck,
+  TrendingUp,
 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import brandLogo from '../../assets/image copy 7.png';
@@ -97,6 +98,7 @@ export function AdminSidebar() {
       title: 'FINANCIAL SERVICES',
       items: [
         { label: 'Payments', path: '/admin-dashboard/payments', icon: CreditCard },
+        { label: 'Investor Management', path: '/admin-dashboard/investors', icon: TrendingUp },
       ],
     },
     {
