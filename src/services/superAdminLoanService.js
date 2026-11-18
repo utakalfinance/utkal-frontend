@@ -419,3 +419,38 @@ export async function getSuperAdminEmiReportsApi(params = {}) {
   }
   return data;
 }
+
+/**
+ * Fetch dynamic loan parameters and EMI policy settings
+ */
+export async function getLoanSettingsApi() {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${apiConfig.baseURL}/loan-applications/admin/settings`, {
+    method: 'GET',
+    headers,
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to fetch loan policy settings');
+  }
+  return data;
+}
+
+/**
+ * Update dynamic loan parameters, interest rates, and EMI policy settings
+ */
+export async function updateLoanSettingsApi(payload) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${apiConfig.baseURL}/loan-applications/admin/settings`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to update loan policy settings');
+  }
+  return data;
+}

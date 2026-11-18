@@ -14,6 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingUp,
+  CheckCircle2,
+  UserCheck,
 } from 'lucide-react';
 
 export function InvestorTable({
@@ -28,7 +30,9 @@ export function InvestorTable({
   onRefresh,
   onViewInvestor,
   onEditInvestor,
+  onFinalApprove,
   onAddNew,
+  associates = [],
 }) {
   const districtsList = [
     'All',
@@ -192,7 +196,25 @@ export function InvestorTable({
         </div>
 
         {/* Dropdown Filters Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-100 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 pt-2 border-t border-slate-100 text-xs">
+          {/* Associate Referral Filter */}
+          <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200">
+            <UserCheck className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <select
+              value={filters.associateId || 'All'}
+              onChange={(e) => onFilterChange('associateId', e.target.value)}
+              className="w-full bg-transparent text-xs font-semibold text-slate-800 focus:outline-none cursor-pointer"
+            >
+              <option value="All">Associate: All</option>
+              <option value="direct">Associate: Direct (HQ)</option>
+              {associates.map((a) => (
+                <option key={a._id} value={a._id}>
+                  {a.name} {a.memberId ? `(${a.memberId})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* District Filter */}
           <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200">
             <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -264,6 +286,7 @@ export function InvestorTable({
               <tr>
                 <th className="py-3.5 px-4">INVESTOR ID</th>
                 <th className="py-3.5 px-4">INVESTOR NAME</th>
+                <th className="py-3.5 px-4">ASSIGNED ASSOCIATE</th>
                 <th className="py-3.5 px-4">MOBILE</th>
                 <th className="py-3.5 px-4">EMAIL</th>
                 <th className="py-3.5 px-4">DISTRICT</th>
@@ -277,7 +300,7 @@ export function InvestorTable({
             <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan="10" className="py-16 text-center text-slate-400">
+                  <td colSpan="11" className="py-16 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <RefreshCw className="w-7 h-7 animate-spin text-blue-600" />
                       <span className="text-xs font-bold text-slate-600">Loading Investors Registry...</span>
@@ -286,7 +309,7 @@ export function InvestorTable({
                 </tr>
               ) : investors.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="py-16 text-center">
+                  <td colSpan="11" className="py-16 text-center">
                     <div className="max-w-sm mx-auto flex flex-col items-center text-center space-y-3">
                       <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
                         <TrendingUp className="w-6 h-6" />
@@ -322,8 +345,47 @@ export function InvestorTable({
                         <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-700 to-indigo-900 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
                           {inv.fullName?.charAt(0)?.toUpperCase() || 'I'}
                         </div>
-                        <span className="font-bold text-slate-900 text-xs block">{inv.fullName}</span>
+                        <div>
+                          <span className="font-bold text-slate-900 text-xs block">{inv.fullName}</span>
+                          {inv.approvalStage === 'approved_by_associate' ? (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 font-extrabold uppercase tracking-tight block w-max mt-0.5">
+                              Associate Approved
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
+                    </td>
+
+                    {/* Assigned Associate */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      {inv.sourcedBy?.associateName ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 font-black text-xs flex items-center justify-center shrink-0 border border-emerald-300">
+                            {inv.sourcedBy.associateName.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <span className="font-bold text-slate-900 text-xs block truncate max-w-[130px]" title={inv.sourcedBy.associateName}>
+                              {inv.sourcedBy.associateName}
+                            </span>
+                            <div className="flex items-center gap-1 mt-0.5">
+                              {inv.sourcedBy.associateMemberId ? (
+                                <span className="font-mono text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200">
+                                  {inv.sourcedBy.associateMemberId}
+                                </span>
+                              ) : null}
+                              {inv.approvalStage === 'approved_by_associate' && (
+                                <span className="text-[9px] font-bold text-blue-700 bg-blue-50 px-1 py-0.2 rounded border border-blue-200">
+                                  Stage 1 OK
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] font-medium text-slate-400 italic">
+                          Direct (HQ)
+                        </span>
+                      )}
                     </td>
 
                     {/* Mobile */}
@@ -377,9 +439,20 @@ export function InvestorTable({
                       </span>
                     </td>
 
-                    {/* Actions: View / Edit */}
+                    {/* Actions: View / Edit / Final Approve */}
                     <td className="py-3.5 px-4 whitespace-nowrap text-center">
                       <div className="flex items-center justify-center gap-1.5">
+                        {inv.approvalStage === 'approved_by_associate' && onFinalApprove && (
+                          <button
+                            type="button"
+                            onClick={() => onFinalApprove(inv)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider shadow-xs transition-colors cursor-pointer"
+                            title="Grant Super Admin Final Approval & Activate Investor"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                            <span>Final Approve</span>
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => onViewInvestor(inv)}

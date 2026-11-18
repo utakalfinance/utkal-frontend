@@ -16,12 +16,14 @@ import {
   Eye,
   Check,
   Plus,
+  UserCheck,
 } from 'lucide-react';
 import {
   createInvestorApi,
   updateInvestorApi,
   getInvestmentPlansApi,
   getInvestorByIdApi,
+  getAssociatesListApi,
 } from '../../../services/investorService';
 import { getBackendAssetUrl } from '../../../config/env';
 
@@ -31,14 +33,16 @@ function resolveDocUrl(directUrl, docObj) {
   return getBackendAssetUrl(raw);
 }
 
-export function AddInvestorModal({ isOpen, investor = null, onClose, onSuccess }) {
+export function AddInvestorModal({ isOpen, investor = null, onClose, onSuccess, isAssociateView = false }) {
   const isEditMode = Boolean(investor);
   const [plans, setPlans] = useState([]);
+  const [associates, setAssociates] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
   // Form State
   const [formData, setFormData] = useState({
+    associateId: '',
     fullName: '',
     mobile: '',
     email: '',
@@ -149,11 +153,21 @@ export function AddInvestorModal({ isOpen, investor = null, onClose, onSuccess }
     }
   }, [isOpen]);
 
+  // Fetch Associate Members List for Admin Assignment
+  useEffect(() => {
+    if (isOpen && !isAssociateView) {
+      getAssociatesListApi()
+        .then((list) => setAssociates(list || []))
+        .catch((err) => console.warn('Could not load associates list:', err));
+    }
+  }, [isOpen, isAssociateView]);
+
   const populateFromInvestor = useCallback((inv) => {
     if (!inv) return;
 
     setFormData((prev) => ({
       ...prev,
+      associateId: inv.sourcedBy?.associateId || '',
       fullName: inv.fullName || '',
       mobile: inv.mobile || '',
       email: inv.email || '',
@@ -256,6 +270,7 @@ export function AddInvestorModal({ isOpen, investor = null, onClose, onSuccess }
       }
     } else if (isOpen) {
       setFormData({
+        associateId: '',
         fullName: '',
         mobile: '',
         email: '',
@@ -439,6 +454,8 @@ export function AddInvestorModal({ isOpen, investor = null, onClose, onSuccess }
   const currentMultiplier = Number(formData.planMultiplier) || 2;
   const calculatedTargetAmount = Math.round(originalInvestmentNum * currentMultiplier);
 
+  const selectedAssociate = associates.find((a) => a._id === formData.associateId);
+
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/80 backdrop-blur-xs select-none">
       <div className="w-full max-w-4xl max-h-[92vh] bg-white rounded-3xl border border-slate-200 shadow-2xl flex flex-col overflow-hidden text-slate-800 animate-fade-in">
@@ -471,6 +488,16 @@ export function AddInvestorModal({ isOpen, investor = null, onClose, onSuccess }
         {/* Quick Jump Section Navigation Pills */}
         <div className="px-5 py-2.5 bg-slate-100 border-b border-slate-200 flex items-center gap-2 overflow-x-auto text-xs font-bold shrink-0 scrollbar-none">
           <span className="text-[10px] text-slate-400 uppercase tracking-wider mr-1">Sections:</span>
+          {!isAssociateView && (
+            <button
+              type="button"
+              onClick={() => scrollToSection('sec-associate')}
+              className="px-3 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-colors shadow-2xs whitespace-nowrap flex items-center gap-1.5"
+            >
+              <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Associate Referral</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => scrollToSection('sec-personal')}
@@ -507,6 +534,96 @@ export function AddInvestorModal({ isOpen, investor = null, onClose, onSuccess }
             <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2.5">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
               <span className="font-semibold">{error}</span>
+            </div>
+          )}
+
+          {/* ============================================================== */}
+          {/* ASSOCIATE MEMBER ASSIGNMENT (REFERRAL SYSTEM) */}
+          {/* ============================================================== */}
+          {!isAssociateView && (
+            <div
+              id="sec-associate"
+              className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-emerald-50/80 via-teal-50/40 to-blue-50/50 border border-emerald-200/90 shadow-xs space-y-4"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-emerald-100/90">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold shadow-xs">
+                    <UserCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-slate-900">Associate Member Assignment</h3>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 uppercase tracking-wider">
+                        Referral System
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600">
+                      Select an Associate Member to attribute this investor. The investor will appear in their dashboard portfolio.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1.5">
+                    Select Associate Member
+                  </label>
+                  <select
+                    name="associateId"
+                    value={formData.associateId || ''}
+                    onChange={handleChange}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-emerald-300 bg-white font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs cursor-pointer"
+                  >
+                    <option value="">Direct Company Onboarding (No Associate Assigned)</option>
+                    {associates.map((assoc) => (
+                      <option key={assoc._id} value={assoc._id}>
+                        {assoc.name} {assoc.memberId ? `(${assoc.memberId})` : ''} — {assoc.assignedDistrict || assoc.email}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    {formData.associateId
+                      ? '✓ This investor will be attributed to the chosen Associate Member.'
+                      : 'No associate selected. Investor will be recorded as direct headquarters intake.'}
+                  </p>
+                </div>
+
+                {/* Selected Associate Summary Pill/Card */}
+                {selectedAssociate ? (
+                  <div className="p-3.5 rounded-xl bg-white border border-emerald-200 flex items-center justify-between shadow-2xs">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black text-sm border border-emerald-300">
+                        {selectedAssociate.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-slate-900 text-xs">{selectedAssociate.name}</span>
+                          {selectedAssociate.memberId && (
+                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              {selectedAssociate.memberId}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
+                          <span>{selectedAssociate.mobile || selectedAssociate.email}</span>
+                          {selectedAssociate.assignedDistrict && (
+                            <span>• {selectedAssociate.assignedDistrict}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                      Assigned
+                    </span>
+                  </div>
+                ) : (
+                  <div className="p-3.5 rounded-xl bg-white/70 border border-dashed border-slate-300 flex items-center gap-2.5 text-slate-400">
+                    <Building2 className="w-5 h-5 text-slate-400 shrink-0" />
+                    <span className="text-xs font-medium">Direct Company Intake (Headquarters portfolio)</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -1173,39 +1290,9 @@ export function AddInvestorModal({ isOpen, investor = null, onClose, onSuccess }
                 </div>
               </div>
 
-              {/* Contractual Percentage */}
+              {/* Plan Duration */}
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Contractual Percentage (%)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  name="contractualPercentage"
-                  value={formData.contractualPercentage}
-                  onChange={handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              {/* Percentage Type / Calculation Basis */}
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">Percentage Calculation Basis</label>
-                <select
-                  name="percentageBasis"
-                  value={formData.percentageBasis}
-                  onChange={handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                >
-                  <option value="Total Contractual Percentage">Total Contractual Percentage</option>
-                  <option value="Annual">Annual</option>
-                  <option value="Monthly">Monthly</option>
-                  <option value="None">None (Principal / Multiplier Only)</option>
-                </select>
-              </div>
-
-              {/* 2X Plan Duration */}
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">2X Plan Duration (Months)</label>
+                <label className="block text-slate-700 font-bold mb-1">Plan Duration (Months)</label>
                 <select
                   name="planDuration"
                   value={formData.planDuration}

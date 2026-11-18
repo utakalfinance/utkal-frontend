@@ -31,6 +31,7 @@ import {
 } from '../../services/superAdminLoanService';
 import { RecordEmiPaymentModal } from '../../components/admin/loans/RecordEmiPaymentModal';
 import { EmiScheduleModal } from '../../components/admin/loans/EmiScheduleModal';
+import { UserEmiTrackingModal } from '../../components/admin/loans/UserEmiTrackingModal';
 
 const ODISHA_DISTRICTS = [
   'All',
@@ -102,6 +103,7 @@ export function EmiCollectionManagement() {
   // Modals state
   const [selectedInstallmentForPayment, setSelectedInstallmentForPayment] = useState(null);
   const [selectedLoanForSchedule, setSelectedLoanForSchedule] = useState(null);
+  const [selectedUserForTracking, setSelectedUserForTracking] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
 
   // Load summary dashboard stats
@@ -251,6 +253,36 @@ export function EmiCollectionManagement() {
     }
   };
 
+  const formatDateTime = (d) => {
+    if (!d) return '—';
+    try {
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return '—';
+      return dt.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } catch {
+      return '—';
+    }
+  };
+
+  const getPunctualityText = (dueDate, paidAt) => {
+    if (!paidAt || !dueDate) return null;
+    const due = new Date(dueDate);
+    const paid = new Date(paidAt);
+    due.setHours(23, 59, 59, 999);
+    const diffDays = Math.ceil((paid.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays <= 0) {
+      return { text: 'On-time', isLate: false };
+    }
+    return { text: `+${diffDays}d delay`, isLate: true };
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Toast Alert */}
@@ -307,7 +339,7 @@ export function EmiCollectionManagement() {
         </div>
       </div>
 
-      {/* Advisory Banner for Option 1 Reducing Balance & CIBIL Confirmation */}
+      {/* Advisory Banner for Option 1 Reducing Balance */}
       <div className="p-4 bg-blue-50/90 border border-blue-200 rounded-2xl text-blue-950 text-xs flex items-start gap-3 shadow-xs">
         <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
         <div className="space-y-1">
@@ -315,7 +347,7 @@ export function EmiCollectionManagement() {
             Selected Interest Method: Option 1 (Reducing Balance EMI)
           </p>
           <p className="text-blue-800 leading-relaxed">
-            Interest is computed strictly on monthly reducing balance principal. Live EMI collections and final schedule enforcement remain subject to client confirmation of tiered interest rules (including 11% / 12% p.a. based on customer CIBIL score).
+            Interest is computed strictly on monthly reducing balance principal. Live EMI collections and final schedule enforcement remain subject to client confirmation of statutory interest rules (11% p.a.).
           </p>
         </div>
       </div>
@@ -500,6 +532,31 @@ export function EmiCollectionManagement() {
             </form>
           </div>
 
+          {/* Active User Search Pill */}
+          {search.trim() && (
+            <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 shadow-2xs">
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4 text-blue-600" />
+                <span>
+                  Filtering EMI collection records for: <strong>"{search}"</strong>
+                </span>
+                <span className="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full font-bold">
+                  {totalInstallments} matching installments
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch('');
+                  setPage(1);
+                }}
+                className="text-xs font-bold text-blue-700 hover:text-blue-900 underline cursor-pointer"
+              >
+                Clear User Filter
+              </button>
+            </div>
+          )}
+
           {/* Installments Table */}
           <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
@@ -549,7 +606,20 @@ export function EmiCollectionManagement() {
                         >
                           {/* App & Customer */}
                           <td className="py-3.5 px-4">
-                            <div className="font-bold text-slate-900">{item.customerName}</div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-slate-900">{item.customerName}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSearch(item.customerName || item.customerId);
+                                  setPage(1);
+                                }}
+                                className="text-[10px] text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-1.5 py-0.5 rounded font-bold cursor-pointer transition-colors"
+                                title="Filter desk to show only this user's EMIs"
+                              >
+                                Filter User
+                              </button>
+                            </div>
                             <div className="flex items-center gap-2 mt-0.5">
                               <span className="font-mono text-[11px] text-indigo-700 font-semibold">
                                 {item.applicationId}
@@ -609,14 +679,35 @@ export function EmiCollectionManagement() {
                             )}
                           </td>
 
-                          {/* Collection Details */}
+                          {/* Collection Details with exact timestamp */}
                           <td className="py-3.5 px-4">
                             {isPaid ? (
-                              <div className="space-y-0.5">
-                                <span className="font-semibold text-emerald-700 block">
-                                  ₹{Number(item.paidAmount || item.emiAmount).toLocaleString('en-IN')} on {formatDate(item.paidAt)}
-                                </span>
-                                <span className="font-mono text-[10px] text-slate-600 block">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-black text-emerald-800 block text-xs">
+                                    ₹{Number(item.paidAmount || item.emiAmount).toLocaleString('en-IN')}
+                                  </span>
+                                  {(() => {
+                                    const p = getPunctualityText(item.dueDate, item.paidAt);
+                                    if (!p) return null;
+                                    return (
+                                      <span
+                                        className={`text-[9px] font-black uppercase px-1.5 py-0.2 rounded border ${
+                                          p.isLate
+                                            ? 'bg-amber-100 text-amber-800 border-amber-300'
+                                            : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                        }`}
+                                      >
+                                        {p.text}
+                                      </span>
+                                    );
+                                  })()}
+                                </div>
+                                <div className="flex items-center gap-1 text-[11px] text-slate-700 font-mono">
+                                  <Clock className="w-3 h-3 text-emerald-600 shrink-0" />
+                                  <span>{formatDateTime(item.paidAt)}</span>
+                                </div>
+                                <span className="font-mono text-[10px] text-slate-500 block truncate max-w-44">
                                   Ref: {item.utrNumber || item.transactionId || '—'}
                                 </span>
                                 {item.paymentMethod && (
@@ -626,25 +717,49 @@ export function EmiCollectionManagement() {
                                 )}
                               </div>
                             ) : (
-                              <span className="text-slate-400 italic">Pending collection</span>
+                              <div className="space-y-1">
+                                <span className="text-slate-400 italic block text-xs">Pending collection</span>
+                                {isOverdue ? (
+                                  <span className="text-[10px] font-bold text-rose-600 block">
+                                    Payment overdue
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] text-slate-500 block">
+                                    Due on {formatDate(item.dueDate)}
+                                  </span>
+                                )}
+                              </div>
                             )}
                           </td>
 
                           {/* Actions */}
                           <td className="py-3.5 px-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* Dedicated Tracking Time Button */}
+                              <button
+                                type="button"
+                                onClick={() => setSelectedUserForTracking(item)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                                title="View exact collection tracking timeline and timestamps for this user"
+                              >
+                                <Clock className="w-3.5 h-3.5 text-blue-600" />
+                                <span>Tracking Time</span>
+                              </button>
+
                               {!isPaid && (
                                 <button
+                                  type="button"
                                   onClick={() => setSelectedInstallmentForPayment(item)}
-                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs transition-colors"
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer"
                                 >
                                   <Receipt className="w-3.5 h-3.5" />
                                   Collect
                                 </button>
                               )}
                               <button
+                                type="button"
                                 onClick={() => setSelectedLoanForSchedule(item)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                                 title="View Complete Schedule"
                               >
                                 <Eye className="w-3.5 h-3.5" />
@@ -937,6 +1052,16 @@ export function EmiCollectionManagement() {
         isOpen={Boolean(selectedLoanForSchedule)}
         onClose={() => setSelectedLoanForSchedule(null)}
         loanData={selectedLoanForSchedule}
+      />
+
+      {/* MODAL 3: USER EMI COLLECTION TRACKING TIMELINE */}
+      <UserEmiTrackingModal
+        isOpen={Boolean(selectedUserForTracking)}
+        onClose={() => setSelectedUserForTracking(null)}
+        userData={selectedUserForTracking}
+        onRecordPaymentClick={(inst) => {
+          setSelectedInstallmentForPayment(inst);
+        }}
       />
     </div>
   );

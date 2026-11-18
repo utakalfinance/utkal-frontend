@@ -153,7 +153,7 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave, dis
       let initialTitle = application.title || p.title || 'Mr.';
 
       if (!initialFirstName && application.applicantName) {
-        const cleaned = application.applicantName.replace(/^(Mr\.|Mrs\.|Ms\.|Dr\.)\s+/i, '');
+        const cleaned = String(application.applicantName).replace(/^(Mr\.|Mrs\.|Ms\.|Dr\.)\s+/i, '');
         const parts = cleaned.split(' ');
         initialFirstName = parts[0] || '';
         if (parts.length > 2) {
@@ -226,10 +226,10 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave, dis
         (typeof d.doc3_eduCert === 'string' ? d.doc3_eduCert : '') ||
         (typeof application.doc3_eduCert === 'string' ? application.doc3_eduCert : '') ||
         (Array.isArray(d.additionalDocuments)
-          ? d.additionalDocuments.find((x) => x.documentType === 'Educational Certificate')?.documentUrl
+          ? d.additionalDocuments.find((x) => x && typeof x === 'object' && x.documentType === 'Educational Certificate')?.documentUrl
           : '') ||
         (Array.isArray(application.additionalDocuments)
-          ? application.additionalDocuments.find((x) => x.documentType === 'Educational Certificate')?.documentUrl
+          ? application.additionalDocuments.find((x) => x && typeof x === 'object' && x.documentType === 'Educational Certificate')?.documentUrl
           : '') ||
         '';
 
@@ -239,10 +239,10 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave, dis
         (typeof d.doc4_birthCert === 'string' ? d.doc4_birthCert : '') ||
         (typeof application.doc4_birthCert === 'string' ? application.doc4_birthCert : '') ||
         (Array.isArray(d.additionalDocuments)
-          ? d.additionalDocuments.find((x) => x.documentType === 'Birth / PAN Certificate' || x.documentType === 'Birth Certificate')?.documentUrl
+          ? d.additionalDocuments.find((x) => x && typeof x === 'object' && (x.documentType === 'Birth / PAN Certificate' || x.documentType === 'Birth Certificate'))?.documentUrl
           : '') ||
         (Array.isArray(application.additionalDocuments)
-          ? application.additionalDocuments.find((x) => x.documentType === 'Birth / PAN Certificate' || x.documentType === 'Birth Certificate')?.documentUrl
+          ? application.additionalDocuments.find((x) => x && typeof x === 'object' && (x.documentType === 'Birth / PAN Certificate' || x.documentType === 'Birth Certificate'))?.documentUrl
           : '') ||
         '';
 
@@ -252,10 +252,10 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave, dis
         (typeof d.doc5_utility === 'string' ? d.doc5_utility : '') ||
         (typeof application.doc5_utility === 'string' ? application.doc5_utility : '') ||
         (Array.isArray(d.additionalDocuments)
-          ? d.additionalDocuments.find((x) => x.documentType === 'Financial / Utility Document' || x.documentType === 'Utility Bill')?.documentUrl
+          ? d.additionalDocuments.find((x) => x && typeof x === 'object' && (x.documentType === 'Financial / Utility Document' || x.documentType === 'Utility Bill'))?.documentUrl
           : '') ||
         (Array.isArray(application.additionalDocuments)
-          ? application.additionalDocuments.find((x) => x.documentType === 'Financial / Utility Document' || x.documentType === 'Utility Bill')?.documentUrl
+          ? application.additionalDocuments.find((x) => x && typeof x === 'object' && (x.documentType === 'Financial / Utility Document' || x.documentType === 'Utility Bill'))?.documentUrl
           : '') ||
         '';
 
@@ -265,10 +265,10 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave, dis
         application.paymentReceiptUrl ||
         application.payment?.receiptUrl ||
         (Array.isArray(d.additionalDocuments)
-          ? d.additionalDocuments.find((x) => x.documentType === 'Payment Receipt')?.documentUrl
+          ? d.additionalDocuments.find((x) => x && typeof x === 'object' && x.documentType === 'Payment Receipt')?.documentUrl
           : '') ||
         (Array.isArray(application.additionalDocuments)
-          ? application.additionalDocuments.find((x) => x.documentType === 'Payment Receipt')?.documentUrl
+          ? application.additionalDocuments.find((x) => x && typeof x === 'object' && x.documentType === 'Payment Receipt')?.documentUrl
           : '') ||
         '';
 
@@ -326,7 +326,7 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave, dis
         paymentReceiptUrl: receiptVal,
         additionalDocuments: Array.isArray(d.additionalDocuments) ? [...d.additionalDocuments] : (Array.isArray(application.additionalDocuments) ? [...application.additionalDocuments] : []),
 
-        status: (application.status || 'pending').toLowerCase(),
+        status: String(application.status || 'pending').toLowerCase(),
       });
       setError('');
       setActiveSection('personal');
@@ -347,7 +347,59 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave, dis
     }
   }, [isOpen]);
 
-  if (!isOpen || !application) return null;
+  // Set all branches according to created (chronological creation order)
+  const branchOptions = useMemo(() => {
+    const list = Array.isArray(districtList) ? districtList : [];
+    const sorted = [...list].sort((a, b) => {
+      const timeA = a && a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b && b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeA - timeB;
+    });
+
+    const formatLabel = (name) => {
+      if (!name) return '';
+      const trimmed = typeof name === 'string' ? name.trim() : String(name || '').trim();
+      const capitalized = trimmed
+        .split(/\s+/)
+        .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : ''))
+        .join(' ');
+      if (/branch|hq|headquarters|circle|office/i.test(capitalized)) {
+        return capitalized;
+      }
+      return `${capitalized} Branch`;
+    };
+
+    const options = [];
+    const seen = new Set();
+
+    sorted.forEach((d) => {
+      if (!d) return;
+      const rawName = typeof d === 'object' ? d.name || d.branch || '' : String(d);
+      const label = formatLabel(rawName);
+      const key = label.toLowerCase();
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        options.push(label);
+      }
+    });
+
+    // Make sure formData.branch or current application.branch is preserved in the options if not already present
+    const currentBranch = formData.branch || application?.branch;
+    if (currentBranch) {
+      const branchStr = typeof currentBranch === 'string' ? currentBranch : String(currentBranch);
+      const branchKey = branchStr.toLowerCase().trim();
+      if (branchKey && !seen.has(branchKey)) {
+        options.push(branchStr);
+        seen.add(branchKey);
+      }
+    }
+
+    if (options.length === 0) {
+      options.push('Bhubaneswar HQ (Nayapalli, IRC Village)');
+    }
+
+    return options;
+  }, [districtList, formData.branch, application?.branch]);
 
   const handleChange = (field, value) => {
     setFormData((prev) => {
@@ -822,57 +874,12 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave, dis
     );
   };
 
-  // Set all branches according to created (chronological creation order)
-  const branchOptions = useMemo(() => {
-    const sorted = [...districtList].sort((a, b) => {
-      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return timeA - timeB;
-    });
-
-    const formatLabel = (name) => {
-      if (!name) return '';
-      const trimmed = name.trim();
-      const capitalized = trimmed
-        .split(/\s+/)
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-        .join(' ');
-      if (/branch|hq|headquarters|circle|office/i.test(capitalized)) {
-        return capitalized;
-      }
-      return `${capitalized} Branch`;
-    };
-
-    const options = [];
-    const seen = new Set();
-
-    sorted.forEach((d) => {
-      const label = formatLabel(d.name);
-      const key = label.toLowerCase();
-      if (key && !seen.has(key)) {
-        seen.add(key);
-        options.push(label);
-      }
-    });
-
-    // Make sure formData.branch or current application.branch is preserved in the options if not already present
-    const currentBranch = formData.branch || application?.branch;
-    if (currentBranch && !seen.has(currentBranch.toLowerCase())) {
-      options.push(currentBranch);
-      seen.add(currentBranch.toLowerCase());
-    }
-
-    if (options.length === 0) {
-      options.push('Bhubaneswar HQ (Nayapalli, IRC Village)');
-    }
-
-    return options;
-  }, [districtList, formData.branch, application?.branch]);
-
   const handleClose = () => {
     lastLoadedAppIdRef.current = null;
     onClose();
   };
+
+  if (!isOpen || !application) return null;
 
   const modalContent = (
     <div
@@ -897,7 +904,7 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave, dis
                   Edit Application Details
                 </h2>
                 <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-200 border border-blue-400/30">
-                  {application.id || application.applicationId}
+                  {application?.id || application?.applicationId || application?._id || 'APP'}
                 </span>
               </div>
               <p className="text-[11px] text-blue-200/80">
@@ -1395,7 +1402,7 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave, dis
                   </label>
                   <select
                     value={
-                      branchOptions.find((opt) => opt.toLowerCase() === (formData.branch || '').toLowerCase()) ||
+                      branchOptions.find((opt) => String(opt).toLowerCase() === String(formData.branch || '').toLowerCase()) ||
                       formData.branch ||
                       branchOptions[0] ||
                       ''
@@ -1668,19 +1675,22 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave, dis
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {formData.additionalDocuments.map((docItem, idx) => {
-                      const rawUrl = docItem.documentUrl;
+                      if (!docItem) return null;
+                      const rawUrl = typeof docItem === 'object' ? docItem.documentUrl : (typeof docItem === 'string' ? docItem : '');
                       const fullUrl = rawUrl ? getBackendAssetUrl(rawUrl) : '';
+                      const docName = (typeof docItem === 'object' ? (docItem.documentName || docItem.documentType) : null) || `Attachment #${idx + 1}`;
+                      const docType = (typeof docItem === 'object' ? docItem.documentType : null) || 'Supporting Document';
                       return (
                         <div key={idx} className="bg-white rounded-xl border border-slate-200 p-3 flex items-center justify-between gap-2 shadow-2xs">
                           <div className="min-w-0">
-                            <span className="text-xs font-bold text-slate-800 block truncate">{docItem.documentName || docItem.documentType || `Attachment #${idx + 1}`}</span>
-                            <span className="text-[10px] text-slate-400 block truncate">{docItem.documentType || 'Supporting Document'}</span>
+                            <span className="text-xs font-bold text-slate-800 block truncate">{docName}</span>
+                            <span className="text-[10px] text-slate-400 block truncate">{docType}</span>
                           </div>
                           {fullUrl && (
                             <div className="flex items-center gap-1 shrink-0">
                               <button
                                 type="button"
-                                onClick={() => setPreviewDoc({ title: docItem.documentName || 'Attachment', url: fullUrl, type: docItem.documentType })}
+                                onClick={() => setPreviewDoc({ title: docName, url: fullUrl, type: docType })}
                                 className="p-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
                                 title="View document"
                               >
@@ -1777,11 +1787,11 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave, dis
           <div className="px-5 sm:px-6 py-3.5 border-t border-slate-200 bg-slate-50/90 flex items-center justify-between shrink-0 shadow-xs z-10">
             <div className="flex items-center gap-2">
               <span className="font-mono text-xs font-bold text-slate-500">
-                {application.id || application.applicationId}
+                {application?.id || application?.applicationId || application?._id || ''}
               </span>
               <span className="text-slate-300">•</span>
               <span className="text-[11px] font-extrabold uppercase text-slate-600">
-                Status: <span className="font-bold text-slate-900 capitalize">{formData.status.replace('_', ' ')}</span>
+                Status: <span className="font-bold text-slate-900 capitalize">{String(formData.status || 'pending').replace('_', ' ')}</span>
               </span>
             </div>
 
@@ -1833,23 +1843,25 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave, dis
             >
               <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
                 <div>
-                  <h3 className="text-base font-black text-slate-900">{previewDoc.title}</h3>
+                  <h3 className="text-base font-black text-slate-900">{previewDoc?.title || 'Document Preview'}</h3>
                   <p className="text-xs text-slate-500 font-mono">
-                    Applicant: {formData.firstName} {formData.lastName} ({application.applicationId || application.id})
+                    Applicant: {formData.firstName} {formData.lastName} ({application?.applicationId || application?.id || application?._id || ''})
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <a
-                    href={previewDoc.url}
-                    download
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 font-bold text-xs hover:bg-blue-100 transition-colors"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Download</span>
-                  </a>
+                  {previewDoc?.url && (
+                    <a
+                      href={previewDoc.url}
+                      download
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 font-bold text-xs hover:bg-blue-100 transition-colors"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download</span>
+                    </a>
+                  )}
                   <button
                     type="button"
                     onClick={() => setPreviewDoc(null)}
@@ -1861,7 +1873,7 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave, dis
               </div>
 
               <div className="bg-slate-900 rounded-2xl flex-1 flex items-center justify-center p-2 overflow-hidden">
-                {previewDoc.url.startsWith('data:application/pdf') || previewDoc.url.includes('.pdf') ? (
+                {typeof previewDoc?.url === 'string' && (previewDoc.url.startsWith('data:application/pdf') || previewDoc.url.toLowerCase().includes('.pdf')) ? (
                   <iframe
                     src={`${previewDoc.url}#toolbar=0`}
                     title="Document PDF"
@@ -1869,8 +1881,8 @@ export function EditApplicationModal({ isOpen, application, onClose, onSave, dis
                   />
                 ) : (
                   <ZoomableImageViewer
-                    src={previewDoc.url}
-                    alt={previewDoc.title}
+                    src={previewDoc?.url || ''}
+                    alt={previewDoc?.title || 'Document'}
                     minZoom={0.5}
                     maxZoom={5.0}
                   />

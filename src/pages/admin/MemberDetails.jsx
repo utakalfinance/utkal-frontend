@@ -202,9 +202,19 @@ export function MemberDetails() {
           </button>
 
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">Member Profile</h1>
               <MemberStatusBadge status={currentStatus} />
+              {(m?.isAssociate || m?.role === 'associate' || targetData?.role === 'associate') ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  Associate Member
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200">
+                  Regular Member
+                </span>
+              )}
             </div>
             <p className="text-xs text-slate-500 font-mono mt-0.5">
               Member ID: <strong className="text-slate-900">{currentMemberId}</strong> • Application ID:{' '}

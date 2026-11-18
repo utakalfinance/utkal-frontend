@@ -25,6 +25,7 @@ import {
   Building2,
   CreditCard,
   FileCheck,
+  PauseCircle,
 } from 'lucide-react';
 import { MemberPageHeader } from '../../../components/member/MemberPageHeader';
 import { useMemberAuth } from '../../../hooks/useMemberAuth';
@@ -136,26 +137,29 @@ export function TrackApplication() {
     }
   };
 
-  // Determine stage states for the 5-step visual timeline
+  // Determine stage states for the direct Super Admin visual timeline
   const getTimelineSteps = (app) => {
     if (!app) return [];
 
-    const isSubmitted = true;
-    const districtStatus = app.districtAdminVerificationStatus;
-    const isDistrictVerified = districtStatus === 'Verified';
-    const isDistrictRejected = districtStatus === 'Rejected';
-    const isDistrictUnderway = districtStatus === 'Under Verification' || districtStatus === 'Pending';
-
-    const isForwarded =
-      app.districtVerification?.isForwardedToSuperAdmin ||
-      isDistrictVerified;
-
     const superAdminStatus = app.superAdminFinalApprovalStatus;
-    const isApproved = superAdminStatus === 'Approved';
-    const isRejected = superAdminStatus === 'Rejected';
-    const isSuperAdminPending = isForwarded && !isApproved && !isRejected;
-
-    const isDisbursed = Boolean(app.disbursement?.isDisbursed);
+    const isApproved =
+      superAdminStatus === 'Approved' ||
+      ['Approved', 'Approved – Not Disbursed', 'Approved - Not Disbursed', 'Disbursed', 'Active'].includes(
+        app.rawStatus || app.currentApplicationStatus
+      );
+    const isRejected =
+      superAdminStatus === 'Rejected' ||
+      app.rawStatus === 'Rejected' ||
+      app.currentApplicationStatus === 'Rejected';
+    const isOnHold =
+      superAdminStatus === 'On Hold' ||
+      app.rawStatus === 'On Hold' ||
+      app.currentApplicationStatus === 'On Hold';
+    const isDisbursed = Boolean(
+      app.disbursement?.isDisbursed ||
+      app.rawStatus === 'Active' ||
+      app.rawStatus === 'Disbursed'
+    );
 
     return [
       {
@@ -164,56 +168,55 @@ export function TrackApplication() {
         sub: formatDate(app.submissionDate),
         status: 'completed',
         icon: CheckCircle2,
+        remarks: `Recorded in MongoDB • ${app.district || 'Branch'} Jurisdiction`,
       },
       {
         id: 2,
-        title: 'District Admin Verification',
-        sub: `${app.district || 'Branch'} Jurisdiction`,
-        status: isDistrictVerified
-          ? 'completed'
-          : isDistrictRejected
-          ? 'rejected'
-          : isDistrictUnderway
-          ? 'active'
-          : 'pending',
-        icon: isDistrictVerified ? CheckCircle2 : isDistrictRejected ? XCircle : Building2,
-        remarks: app.districtAdminRemarks,
-      },
-      {
-        id: 3,
-        title: 'Forwarded to Super Admin',
-        sub: isForwarded ? 'Forwarded for Sanction' : 'Awaiting District Sign-off',
-        status: isForwarded
-          ? 'completed'
-          : isDistrictRejected
-          ? 'skipped'
-          : 'pending',
-        icon: isForwarded ? CheckCircle2 : Send,
-      },
-      {
-        id: 4,
-        title: 'Super Admin Final Approval',
-        sub: isApproved ? 'Sanctioned' : isRejected ? 'Rejected' : 'Under Review',
+        title: 'Super Admin Sanction',
+        sub: isApproved
+          ? 'Approved & Sanctioned'
+          : isRejected
+          ? 'Application Declined'
+          : isOnHold
+          ? 'Placed On Hold'
+          : 'Pending Super Admin Review',
         status: isApproved
           ? 'completed'
           : isRejected
           ? 'rejected'
-          : isSuperAdminPending
+          : isOnHold
           ? 'active'
-          : 'pending',
-        icon: isApproved ? CheckCircle2 : isRejected ? XCircle : ShieldCheck,
-        remarks: app.finalDecisionRemarks,
+          : 'active',
+        icon: isApproved
+          ? CheckCircle2
+          : isRejected
+          ? XCircle
+          : isOnHold
+          ? PauseCircle
+          : ShieldCheck,
+        remarks:
+          app.finalDecisionRemarks ||
+          (isApproved
+            ? 'Loan facility sanctioned by Super Admin'
+            : isRejected
+            ? app.superAdminRejectionReason || 'Application rejected'
+            : isOnHold
+            ? 'Application placed on hold'
+            : 'Routed directly to Super Admin for approval.'),
       },
       {
-        id: 5,
-        title: 'Loan Disbursement',
-        sub: isDisbursed ? 'Funds Disbursed to Bank' : 'Pending Sanction & Release',
-        status: isDisbursed
-          ? 'completed'
+        id: 3,
+        title: 'Capital Disbursement',
+        sub: isDisbursed
+          ? 'Funds Disbursed to Bank'
           : isApproved
-          ? 'active'
-          : 'pending',
+          ? 'Ready for Disbursement'
+          : 'Pending Sanction',
+        status: isDisbursed ? 'completed' : isApproved ? 'active' : 'pending',
         icon: isDisbursed ? CheckCircle2 : CreditCard,
+        remarks: isDisbursed
+          ? 'Loan proceeds transferred to registered bank account'
+          : 'Disbursement released following Super Admin approval',
       },
     ];
   };
@@ -225,7 +228,7 @@ export function TrackApplication() {
       {/* PAGE HEADER */}
       <MemberPageHeader
         title="Track Application Status"
-        description="Monitor statutory member loan applications through the two-tier verification hierarchy: District Administration review followed by Super Admin sanction."
+        description="Monitor member loan applications with direct Super Admin review, sanction, and disbursement tracking."
         badge="APPLICATION TRACKER"
         breadcrumbs={[
           { label: 'Loan Services', path: '/member-dashboard/loans/overview' },
@@ -370,16 +373,16 @@ export function TrackApplication() {
                 </div>
               </div>
 
-              {/* 5-STAGE PROFESSIONAL VISUAL TIMELINE */}
+              {/* DIRECT SUPER ADMIN PROFESSIONAL VISUAL TIMELINE */}
               <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-6 sm:p-8 space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
                   <div>
                     <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-blue-600" />
-                      Two-Tier Underwriting & Approval Pipeline
+                      Super Admin Underwriting & Approval Pipeline
                     </h3>
                     <p className="text-xs text-slate-500">
-                      Standard multi-tier governance procedure mandated by Utkal Finance bylaws.
+                      Direct member application review, Super Admin sanction, and capital disbursement.
                     </p>
                   </div>
                   <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 self-start sm:self-auto">
@@ -389,7 +392,7 @@ export function TrackApplication() {
 
                 {/* Timeline Stepper Container */}
                 <div className="relative">
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 relative">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative">
                     {steps.map((step, idx) => {
                       const IconComponent = step.icon;
                       const isCompleted = step.status === 'completed';
@@ -483,7 +486,7 @@ export function TrackApplication() {
 
               {/* DETAILED VERIFICATION ACCORDIONS & REMARKS */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                {/* 1. District Admin Verification Card */}
+                {/* 1. Direct Application Routing & Jurisdiction Card */}
                 <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-6 space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <div className="flex items-center gap-2.5">
@@ -492,45 +495,31 @@ export function TrackApplication() {
                       </div>
                       <div>
                         <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                          District Administration Review
+                          Application Routing & Branch
                         </h4>
                         <span className="text-[10px] text-slate-500">
                           {activeApp.district} District Branch
                         </span>
                       </div>
                     </div>
-                    <span
-                      className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border ${
-                        activeApp.districtAdminVerificationStatus === 'Verified'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : activeApp.districtAdminVerificationStatus === 'Rejected'
-                          ? 'bg-rose-50 text-rose-700 border-rose-200'
-                          : 'bg-amber-50 text-amber-700 border-amber-200'
-                      }`}
-                    >
-                      {activeApp.districtAdminVerificationStatus || 'Pending'}
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border bg-blue-50 text-blue-700 border-blue-200">
+                      Direct to Super Admin
                     </span>
                   </div>
 
                   <div className="space-y-3 text-xs">
                     <div>
                       <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">
-                        District Admin Official Remarks:
+                        Routing Remarks:
                       </span>
                       <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-700 text-[11px] leading-relaxed">
-                        {activeApp.districtAdminRemarks || 'Awaiting initial review by the assigned District Administration.'}
+                        {activeApp.districtAdminRemarks || 'Application submitted directly to Super Admin for final review and sanction.'}
                       </div>
                     </div>
 
-                    {activeApp.districtRejectionReason && (
-                      <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs">
-                        <strong>Rejection Reason:</strong> {activeApp.districtRejectionReason}
-                      </div>
-                    )}
-
                     <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-                      <span>Assigned District: <strong className="text-slate-800">{activeApp.district}</strong></span>
-                      <span>Forwarded to HQ: <strong className="text-slate-800">{activeApp.districtVerification?.isForwardedToSuperAdmin ? 'Yes' : 'Pending'}</strong></span>
+                      <span>Jurisdiction Branch: <strong className="text-slate-800">{activeApp.district} District</strong></span>
+                      <span>Review Tier: <strong className="text-blue-700">Super Admin Sanction</strong></span>
                     </div>
                   </div>
                 </div>
@@ -625,10 +614,10 @@ export function TrackApplication() {
 
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                      CIBIL Score Category
+                      Interest Rate Policy
                     </span>
                     <span className="text-xs font-bold text-blue-700 block mt-0.5">
-                      {activeApp.cibilScore ? `${activeApp.cibilScore} (${activeApp.cibilScore > 600 ? '11% Tier' : '12% Tier'})` : '11% / 12% Policy'}
+                      {activeApp.interestRate ? `${activeApp.interestRate}% p.a.` : '11% p.a. (Statutory)'}
                     </span>
                   </div>
                 </div>

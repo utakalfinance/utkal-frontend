@@ -156,14 +156,16 @@ export function MemberDashboard() {
         return { text: 'Active & Disbursed', color: 'bg-emerald-50 text-emerald-700 border-emerald-200 ring-1 ring-emerald-500/20' };
       case 'Approved':
       case 'Approved - Not Disbursed':
+      case 'Approved – Not Disbursed':
         return { text: 'Approved (Pending Disbursement)', color: 'bg-teal-50 text-teal-800 border-teal-200 ring-1 ring-teal-500/20' };
-      case 'Verified by District Admin – Pending Final Approval':
+      case 'Pending Final Approval':
       case 'Forwarded to Super Admin':
-        return { text: 'Forwarded to Super Admin', color: 'bg-cyan-50 text-cyan-800 border-cyan-200' };
+      case 'Verified by District Admin – Pending Final Approval':
+        return { text: 'Pending Super Admin Approval', color: 'bg-cyan-50 text-cyan-800 border-cyan-200' };
       case 'Pending District Verification':
       case 'Under Verification':
       case 'Submitted':
-        return { text: 'In Verification', color: 'bg-amber-50 text-amber-800 border-amber-200' };
+        return { text: 'Pending Super Admin Approval', color: 'bg-amber-50 text-amber-800 border-amber-200' };
       case 'On Hold':
         return { text: 'On Hold', color: 'bg-orange-50 text-orange-800 border-orange-200' };
       case 'Rejected':
@@ -464,7 +466,7 @@ export function MemberDashboard() {
                 </div>
                 <div className="flex items-center gap-1.5 text-emerald-700">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>Fast District Verification</span>
+                  <span>Direct Super Admin Sanction</span>
                 </div>
               </div>
             </div>

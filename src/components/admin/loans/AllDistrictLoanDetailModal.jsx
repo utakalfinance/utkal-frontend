@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   X,
   User,
@@ -20,9 +21,24 @@ import {
   MapPin,
   HelpCircle,
   FileCheck2,
+  Maximize2,
 } from 'lucide-react';
+import { getBackendAssetUrl } from '../../../config/env';
 
 export function AllDistrictLoanDetailModal({ isOpen, onClose, loan }) {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   if (!isOpen || !loan) return null;
 
   const formatDate = (d) => {
@@ -144,18 +160,33 @@ export function AllDistrictLoanDetailModal({ isOpen, onClose, loan }) {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  navigate(`/admin-dashboard/loan-details/${loan._id || loan.applicationId || loan.id}`);
+                }}
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                title="Open full page dossier in Admin Dashboard"
+              >
+                <Maximize2 className="w-5 h-5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 sm:p-6 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+        <div className="p-5 sm:p-6 space-y-6 max-h-[78vh] overflow-y-auto custom-scrollbar">
           {/* APPLICANT PROFILE & REGIONAL JURISDICTION */}
           <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 sm:p-5 space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-slate-200">
@@ -265,13 +296,12 @@ export function AllDistrictLoanDetailModal({ isOpen, onClose, loan }) {
                   <ShieldCheck className="w-4 h-4 text-blue-600" /> Tier 1: District Verification
                 </span>
                 <span
-                  className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${
-                    districtVerification.status === 'Verified'
-                      ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                      : districtVerification.status === 'Rejected'
+                  className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${districtVerification.status === 'Verified'
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                    : districtVerification.status === 'Rejected'
                       ? 'bg-rose-100 text-rose-800 border-rose-200'
                       : 'bg-amber-100 text-amber-800 border-amber-200'
-                  }`}
+                    }`}
                 >
                   {districtVerification.status || 'Pending'}
                 </span>
@@ -312,15 +342,14 @@ export function AllDistrictLoanDetailModal({ isOpen, onClose, loan }) {
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Tier 2: Super Admin Sanction
                 </span>
                 <span
-                  className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${
-                    finalApproval.status === 'Approved'
-                      ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                      : finalApproval.status === 'Rejected'
+                  className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${finalApproval.status === 'Approved'
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                    : finalApproval.status === 'Rejected'
                       ? 'bg-rose-100 text-rose-800 border-rose-200'
                       : finalApproval.status === 'On Hold'
-                      ? 'bg-purple-100 text-purple-800 border-purple-200'
-                      : 'bg-amber-100 text-amber-800 border-amber-200'
-                  }`}
+                        ? 'bg-purple-100 text-purple-800 border-purple-200'
+                        : 'bg-amber-100 text-amber-800 border-amber-200'
+                    }`}
                 >
                   {finalApproval.status || 'Pending'}
                 </span>
@@ -393,9 +422,9 @@ export function AllDistrictLoanDetailModal({ isOpen, onClose, loan }) {
                       </span>
                     </div>
 
-                    {doc.documentUrl && (
+                    {(doc.documentUrl || doc.fileUrl) && (
                       <a
-                        href={doc.documentUrl}
+                        href={getBackendAssetUrl(doc.documentUrl || doc.fileUrl)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-2.5 py-1 rounded-lg bg-blue-600 text-white text-[11px] font-bold hover:bg-blue-700 transition-colors flex items-center gap-1 shrink-0"

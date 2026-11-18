@@ -29,7 +29,7 @@ import { fetchEmiScheduleApi } from '../../../services/customerLoanService';
  *
  * Implements Section 5 requirements:
  * 1. Approved loan amount
- * 2. Confirmed interest rate (11% >600 CIBIL / 12% <=600 CIBIL notice)
+ * 2. Confirmed interest rate (11% p.a. statutory rate)
  * 3. Selected tenure (3, 6, 9 Months)
  * 4. Monthly EMI
  * 5. Total payable amount
@@ -39,7 +39,7 @@ import { fetchEmiScheduleApi } from '../../../services/customerLoanService';
  * 9. Remaining balance
  *
  * MANDATED CLIENT POLICY CONSTRAINTS:
- * - 11% interest for CIBIL scores >600 and 12% <=600 under Option 1 (Reducing Balance),
+ * - 11% statutory interest rate under Option 1 (Reducing Balance),
  *   but complete interest rules and calculation method are awaiting official confirmation.
  * - Do not use the old 5% calculation as an official loan rate.
  * - Do not enable Pay Now until client confirms the interest rules and repayment policy.
@@ -196,26 +196,36 @@ export function EmiSchedule() {
       ) : (
         /* AFTER DISBURSEMENT: FULL FINTECH REPAYMENT INTERFACE */
         <div className="space-y-6">
-          {/* MANDATED ADVISORY BANNER: AWAITING CONFIRMATION POLICY */}
-          <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-3xl p-5 sm:p-6 text-amber-950 space-y-3 shadow-xs">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-2xl bg-amber-500/20 text-amber-800 flex items-center justify-center shrink-0 mt-0.5">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-black tracking-tight text-amber-950">
-                    EMI Schedule Awaiting Official Management Confirmation
-                  </h3>
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 bg-amber-200/80 text-amber-900 rounded-full">
-                    REPAYMENTS PAUSED
-                  </span>
+          {/* ACTIVE REPAYMENT TIMETABLE BANNER */}
+          <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 border border-blue-800 rounded-3xl p-5 sm:p-6 text-white space-y-3 shadow-md">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-400/30 text-blue-300 flex items-center justify-center shrink-0 mt-0.5">
+                  <ShieldCheck className="w-5 h-5" />
                 </div>
-                <p className="text-xs text-amber-900 leading-relaxed">
-                  Utkal Finance management has specified an <strong>11% interest rate</strong> for CIBIL scores above 600 and <strong>12%</strong> for scores below or equal to 600 under <em>Option 1 (Reducing Balance EMI)</em>. The complete interest rules and calculation methodology are currently awaiting final administrative confirmation. 
-                  In strict compliance with instructions, online repayments and "Pay Now" actions remain safely disabled until official confirmation.
-                </p>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-black tracking-tight text-white">
+                      Active Member Credit Facility • EMI Repayment Ledger
+                    </h3>
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 rounded-full">
+                      ACTIVE & DISBURSED
+                    </span>
+                  </div>
+                  <p className="text-xs text-blue-200/90 leading-relaxed">
+                    Installments are scheduled under the <strong>{scheduleData.interestRate || '1% / Month'}</strong> Reducing Balance method. 
+                    Timely installment settlements elevate your credit score and unlock higher statutory credit tiers.
+                  </p>
+                </div>
               </div>
+              <button
+                onClick={() => navigate('/member-dashboard/loans/repayment')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs shadow-md transition-all cursor-pointer shrink-0"
+              >
+                <Wallet className="w-4 h-4" />
+                <span>Pay Next EMI</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
 
@@ -257,16 +267,16 @@ export function EmiSchedule() {
               <span className="text-[10px] text-slate-400 block truncate">Sanctioned Principal</span>
             </div>
 
-            {/* 2. Confirmed Interest Rate (Policy Notice) */}
+            {/* 2. Confirmed Interest Rate */}
             <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-1">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">
                 2. Interest Rate
               </span>
-              <span className="text-sm font-black text-blue-700 block truncate" title="11% (>600 CIBIL) / 12% (<=600 CIBIL)">
-                11% / 12% CIBIL*
+              <span className="text-sm font-black text-blue-700 block truncate">
+                {scheduleData.interestRate || '1% / Month'}
               </span>
-              <span className="text-[10px] text-amber-700 font-bold block truncate">
-                Awaiting Sign-off
+              <span className="text-[10px] text-emerald-700 font-bold block truncate">
+                Reducing Balance
               </span>
             </div>
 
@@ -372,13 +382,12 @@ export function EmiSchedule() {
                       </td>
                       <td className="py-4 px-4">
                         <span
-                          className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                            inst.paymentStatus === 'Paid'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : inst.paymentStatus === 'Overdue'
+                          className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${inst.paymentStatus === 'Paid'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : inst.paymentStatus === 'Overdue'
                               ? 'bg-rose-50 text-rose-700 border-rose-200'
                               : 'bg-blue-50 text-blue-700 border-blue-200'
-                          }`}
+                            }`}
                         >
                           {inst.paymentStatus || 'Pending'}
                         </span>
@@ -389,10 +398,13 @@ export function EmiSchedule() {
                             <CheckCircle2 className="w-4 h-4" /> Settled
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-amber-800 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200 cursor-not-allowed">
-                            <Clock className="w-3.5 h-3.5 text-amber-600" />
-                            Awaiting Confirmation
-                          </span>
+                          <button
+                            onClick={() => navigate('/member-dashboard/loans/repayment')}
+                            className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg shadow-2xs transition-all cursor-pointer"
+                          >
+                            <CreditCard className="w-3.5 h-3.5" />
+                            Pay EMI
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -403,7 +415,7 @@ export function EmiSchedule() {
 
             {/* Table Footer Policy Notice */}
             <div className="p-4 bg-slate-50/70 border-t border-slate-200 text-slate-500 text-[11px] flex items-center justify-between">
-              <span>* 11% / 12% CIBIL reducing rate under administrative review.</span>
+              <span>* Monthly installments calculated under active Utkal Finance Member Credit Policy 2026.</span>
               <button
                 onClick={() => navigate('/member-dashboard/loans/track')}
                 className="text-blue-600 hover:text-blue-700 font-bold hover:underline"

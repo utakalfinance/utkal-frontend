@@ -246,7 +246,7 @@ export function MemberNotifications() {
         category: 'LOANS',
         title: `EMI Schedule & Interest Policy Advisory`,
         date: formatDate(loanOverview?.nextEmiDueDate || latestApp.createdAt),
-        message: `Management is confirming the 11%/12% CIBIL score interest rules. Online payment collection is paused pending client confirmation.`,
+        message: `Management is confirming the statutory loan interest rules. Online payment collection is paused pending client confirmation.`,
         icon: Calendar,
         iconColor: 'bg-amber-50 text-amber-800 border-amber-300',
         actionLink: '/member-dashboard/loans/emi-schedule',

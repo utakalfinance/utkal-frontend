@@ -36,6 +36,7 @@ import {
   Briefcase,
   PlusCircle,
   ShieldAlert,
+  UserCheck,
 } from 'lucide-react';
 import {
   getInvestorByIdApi,
@@ -56,7 +57,7 @@ import { AssignPlanModal } from './AssignPlanModal';
 import { RecordPayoutModal } from './RecordPayoutModal';
 import { AddAdditionalInvestmentModal } from './AddAdditionalInvestmentModal';
 
-export function InvestorDetailsModal({ isOpen, investorId, onClose, onUpdate }) {
+export function InvestorDetailsModal({ isOpen, investorId, onClose, onUpdate, readOnly = false }) {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -629,29 +630,37 @@ export function InvestorDetailsModal({ isOpen, investorId, onClose, onUpdate }) 
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowAddInvestmentModal(true)}
-              className="px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white shadow-xs transition-all cursor-pointer active:scale-95"
-              title="Add an additional repeat investment under this investor profile"
-            >
-              <PlusCircle className="w-3.5 h-3.5" />
-              <span>+ Add Additional Investment</span>
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => setShowAddInvestmentModal(true)}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white shadow-xs transition-all cursor-pointer active:scale-95"
+                title="Add an additional repeat investment under this investor profile"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>+ Add Additional Investment</span>
+              </button>
+            )}
 
-            <button
-              type="button"
-              onClick={() => setRevealSensitive(!revealSensitive)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border ${
-                revealSensitive
-                  ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-xs'
-                  : 'bg-white/10 text-white border-white/20 hover:bg-white/20'
-              }`}
-              title="Toggle reveal for sensitive Aadhaar, PAN and Bank details"
-            >
-              {revealSensitive ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
-              <span>{revealSensitive ? 'Mask Data' : 'Reveal Data'}</span>
-            </button>
+            {readOnly ? (
+              <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                View Only
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setRevealSensitive(!revealSensitive)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border ${
+                  revealSensitive
+                    ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-xs'
+                    : 'bg-white/10 text-white border-white/20 hover:bg-white/20'
+                }`}
+                title="Toggle reveal for sensitive Aadhaar, PAN and Bank details"
+              >
+                {revealSensitive ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                <span>{revealSensitive ? 'Mask Data' : 'Reveal Data'}</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -796,6 +805,58 @@ export function InvestorDetailsModal({ isOpen, investorId, onClose, onUpdate }) 
                         <span className="font-medium text-slate-800">{investor?.address || 'Address not provided'}</span>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Assigned Associate Member (Referral System) */}
+                  <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                          <UserCheck className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-slate-900">Assigned Associate Member (Referral Partner)</h3>
+                          <p className="text-[11px] text-slate-500">Business Associate attributed for this investor&apos;s mobilization &amp; servicing</p>
+                        </div>
+                      </div>
+                      {investor?.sourcedBy?.associateName ? (
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300">
+                          Associate Assigned
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                          Direct Headquarter Sourcing
+                        </span>
+                      )}
+                    </div>
+
+                    {investor?.sourcedBy?.associateName ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+                        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                          <span className="text-slate-400 block mb-0.5">Associate Name</span>
+                          <span className="font-bold text-slate-900 text-sm">{investor.sourcedBy.associateName}</span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                          <span className="text-slate-400 block mb-0.5">Associate Member ID</span>
+                          <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block">
+                            {investor.sourcedBy.associateMemberId || 'N/A'}
+                          </span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                          <span className="text-slate-400 block mb-0.5">Associate Mobile</span>
+                          <span className="font-mono font-bold text-slate-900">{investor.sourcedBy.associateMobile || 'N/A'}</span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                          <span className="text-slate-400 block mb-0.5">Associate Email</span>
+                          <span className="font-medium text-slate-900 truncate block">{investor.sourcedBy.associateEmail || 'N/A'}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-slate-500 text-xs flex items-center gap-3">
+                        <Building2 className="w-5 h-5 text-slate-400 shrink-0" />
+                        <span>This investor was onboarded directly by the Headquarter administration without an assigned Associate Member.</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Banking Details */}
@@ -1048,50 +1109,52 @@ export function InvestorDetailsModal({ isOpen, investorId, onClose, onUpdate }) 
                     </div>
 
                     {/* KYC Admin Actions Box */}
-                    <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                      <div>
-                        <span className="text-xs font-bold text-slate-900 block">KYC Decision Panel</span>
-                        <p className="text-[11px] text-slate-500">
-                          {investor?.kycStatus === 'Verified'
-                            ? `Approved by ${investor?.kycVerifiedBy || 'Super Admin'} on ${
-                                investor?.kycVerifiedAt
-                                  ? new Date(investor.kycVerifiedAt).toLocaleDateString('en-IN')
-                                  : 'Record'
-                              }`
-                            : 'Perform KYC compliance review on submitted identity proofs'}
-                        </p>
-                      </div>
+                    {!readOnly && (
+                      <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div>
+                          <span className="text-xs font-bold text-slate-900 block">KYC Decision Panel</span>
+                          <p className="text-[11px] text-slate-500">
+                            {investor?.kycStatus === 'Verified'
+                              ? `Approved by ${investor?.kycVerifiedBy || 'Super Admin'} on ${
+                                  investor?.kycVerifiedAt
+                                    ? new Date(investor.kycVerifiedAt).toLocaleDateString('en-IN')
+                                    : 'Record'
+                                }`
+                              : 'Perform KYC compliance review on submitted identity proofs'}
+                          </p>
+                        </div>
 
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {investor?.kycStatus !== 'Verified' && (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {investor?.kycStatus !== 'Verified' && (
+                            <button
+                              type="button"
+                              onClick={handleVerifyKyc}
+                              disabled={processingKyc}
+                              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                            >
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span>Verify KYC</span>
+                            </button>
+                          )}
                           <button
                             type="button"
-                            onClick={handleVerifyKyc}
-                            disabled={processingKyc}
-                            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                            onClick={() => setShowCorrectionModal(true)}
+                            className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs border border-purple-200 transition-colors cursor-pointer"
                           >
-                            <CheckCircle2 className="w-4 h-4" />
-                            <span>Verify KYC</span>
+                            Request Correction
                           </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setShowCorrectionModal(true)}
-                          className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs border border-purple-200 transition-colors cursor-pointer"
-                        >
-                          Request Correction
-                        </button>
-                        {investor?.kycStatus !== 'Rejected' && (
-                          <button
-                            type="button"
-                            onClick={() => setShowRejectKycModal(true)}
-                            className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 transition-colors cursor-pointer"
-                          >
-                            Reject KYC
-                          </button>
-                        )}
+                          {investor?.kycStatus !== 'Rejected' && (
+                            <button
+                              type="button"
+                              onClick={() => setShowRejectKycModal(true)}
+                              className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 transition-colors cursor-pointer"
+                            >
+                              Reject KYC
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1227,27 +1290,31 @@ export function InvestorDetailsModal({ isOpen, investorId, onClose, onUpdate }) 
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setShowAddInvestmentModal(true)}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer shrink-0"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Add Additional Investment</span>
-                      </button>
+                      {!readOnly && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAddInvestmentModal(true)}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer shrink-0"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Additional Investment</span>
+                        </button>
+                      )}
                     </div>
 
                     {investments.length === 0 ? (
                       <div className="py-12 text-center text-slate-400 space-y-3">
                         <Briefcase className="w-10 h-10 mx-auto text-slate-300" />
                         <p className="text-xs font-semibold">No investment records registered yet.</p>
-                        <button
-                          type="button"
-                          onClick={() => setShowAddInvestmentModal(true)}
-                          className="px-4 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700"
-                        >
-                          Add First Investment
-                        </button>
+                        {!readOnly && (
+                          <button
+                            type="button"
+                            onClick={() => setShowAddInvestmentModal(true)}
+                            className="px-4 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700"
+                          >
+                            Add First Investment
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <div className="overflow-x-auto -mx-5 sm:mx-0">
@@ -1349,7 +1416,7 @@ export function InvestorDetailsModal({ isOpen, investorId, onClose, onUpdate }) 
                                       >
                                         {inv.paymentStatus || 'Pending'}
                                       </span>
-                                      {isPendingPayment && (
+                                      {isPendingPayment && !readOnly && (
                                         <button
                                           type="button"
                                           onClick={() => handleVerifyInvestmentPayment(inv)}
@@ -1441,14 +1508,16 @@ export function InvestorDetailsModal({ isOpen, investorId, onClose, onUpdate }) 
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setShowRecordPayment(true)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>Record Additional Payment</span>
-                      </button>
+                      {!readOnly && (
+                        <button
+                          type="button"
+                          onClick={() => setShowRecordPayment(true)}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Record Additional Payment</span>
+                        </button>
+                      )}
                     </div>
 
                     {/* Summary KPI Badges */}
@@ -1547,7 +1616,11 @@ export function InvestorDetailsModal({ isOpen, investorId, onClose, onUpdate }) 
                                   </span>
                                 </td>
                                 <td className="py-3 px-4 text-center">
-                                  {pmt.status === 'Pending' ? (
+                                  {readOnly ? (
+                                    <span className="text-[11px] text-slate-400 font-mono">
+                                      {pmt.status === 'Verified' ? '✓ Credited' : pmt.status === 'Rejected' ? '✕ Rejected' : 'Pending'}
+                                    </span>
+                                  ) : pmt.status === 'Pending' ? (
                                     <div className="flex items-center justify-center gap-1.5">
                                       <button
                                         type="button"
@@ -1601,33 +1674,35 @@ export function InvestorDetailsModal({ isOpen, investorId, onClose, onUpdate }) 
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setShowAssignPlan(true)}
-                          className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs"
-                        >
-                          Change / Reassign Plan
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNotificationForm((prev) => ({
-                              ...prev,
-                              type: 'InvestmentConfirmation',
-                              channel: 'Both',
-                            }));
-                            setNotificationStatusMsg(null);
-                            setShowNotificationModal(true);
-                          }}
-                          disabled={investor?.paymentStatus !== 'Verified'}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs transition-colors disabled:opacity-50 cursor-pointer"
-                          title="Dispatch official confirmation notice via Email & SMS"
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                          <span>Send Confirmation Notice</span>
-                        </button>
-                      </div>
+                      {!readOnly && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowAssignPlan(true)}
+                            className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs"
+                          >
+                            Change / Reassign Plan
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNotificationForm((prev) => ({
+                                ...prev,
+                                type: 'InvestmentConfirmation',
+                                channel: 'Both',
+                              }));
+                              setNotificationStatusMsg(null);
+                              setShowNotificationModal(true);
+                            }}
+                            disabled={investor?.paymentStatus !== 'Verified'}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs transition-colors disabled:opacity-50 cursor-pointer"
+                            title="Dispatch official confirmation notice via Email & SMS"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            <span>Send Confirmation Notice</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Plan Details Grid */}
@@ -1711,21 +1786,23 @@ export function InvestorDetailsModal({ isOpen, investorId, onClose, onUpdate }) 
                       </div>
 
                       {/* Upload New Agreement File */}
-                      <form onSubmit={handleUploadAgreement} className="flex items-center gap-2 flex-wrap pt-2">
-                        <input
-                          type="file"
-                          accept=".pdf,image/*"
-                          onChange={(e) => setAgreementFile(e.target.files[0])}
-                          className="text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700"
-                        />
-                        <button
-                          type="submit"
-                          disabled={!agreementFile || uploadingAgreement}
-                          className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs"
-                        >
-                          {uploadingAgreement ? 'Uploading...' : 'Upload Signed Agreement'}
-                        </button>
-                      </form>
+                      {!readOnly && (
+                        <form onSubmit={handleUploadAgreement} className="flex items-center gap-2 flex-wrap pt-2">
+                          <input
+                            type="file"
+                            accept=".pdf,image/*"
+                            onChange={(e) => setAgreementFile(e.target.files[0])}
+                            className="text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700"
+                          />
+                          <button
+                            type="submit"
+                            disabled={!agreementFile || uploadingAgreement}
+                            className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs"
+                          >
+                            {uploadingAgreement ? 'Uploading...' : 'Upload Signed Agreement'}
+                          </button>
+                        </form>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2383,7 +2460,7 @@ export function InvestorDetailsModal({ isOpen, investorId, onClose, onUpdate }) 
                   <CreditCard className="w-3.5 h-3.5 text-blue-600" />
                   <span>Payment & Clearance Voucher</span>
                 </span>
-                {selectedInvestmentForView.paymentStatus === 'Pending' && (
+                {selectedInvestmentForView.paymentStatus === 'Pending' && !readOnly && (
                   <button
                     type="button"
                     onClick={() => {

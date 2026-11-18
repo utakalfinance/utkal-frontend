@@ -1,21 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FilePlus2,
-  Sparkles,
-  ShieldCheck,
   CheckCircle2,
-  Upload,
-  IndianRupee,
-  Briefcase,
-  Building,
-  Info,
-  Clock,
-  ArrowRight,
-  FileText,
   AlertTriangle,
-  X,
-  FileCheck2,
+  ArrowRight,
+  IndianRupee,
+  Calendar,
+  Percent,
+  Calculator,
+  UploadCloud,
+  FileCheck,
 } from 'lucide-react';
 import { MemberPageHeader } from '../../../components/member/MemberPageHeader';
 import { useMemberAuth } from '../../../hooks/useMemberAuth';
@@ -26,13 +21,11 @@ import {
 
 /**
  * ApplyLoan Page (/member-dashboard/loans/apply)
- * Modern fintech loan application form:
- * - First loan amount fixed at ₹10,000.
- * - Tenure options: 3, 6, and 9 months.
- * - Loan purpose, occupation, income, enterprise details.
- * - CIBIL score & verification guidelines (11% / 12% tiers).
- * - Required additional documents upload.
- * - Clean pre-submission application summary.
+ * Displays strictly what admin configured:
+ * 1. Admin-set Loan Amount
+ * 2. Admin-set Annual Interest Rate
+ * 3. Admin-set EMI Months (Tenures) & calculated monthly EMI
+ * 4. Document upload inputs only (Aadhaar, PAN, Bank Statement, Photo/Income)
  */
 export function ApplyLoan() {
   const navigate = useNavigate();
@@ -47,20 +40,47 @@ export function ApplyLoan() {
     hasActivePending: false,
     activeAppId: null,
     memberDistrict: 'Khurda',
+    loanSetting: null,
   });
 
-  const FIRST_LOAN_AMOUNT = 10000;
+  const primaryProduct = policyData.products?.[0] || {};
+  const activeSetting = policyData.loanSetting || {};
 
-  const [formData, setFormData] = useState({
-    preferredTenureMonths: '3',
-    loanPurpose: 'Agricultural Inputs & Working Capital',
-    occupationType: 'Self-Employed / Small Business',
-    monthlyIncome: '',
-    employerOrBusinessName: '',
-    workAddress: '',
-    cibilScore: '',
-  });
+  // 1. Admin-configured Loan Amount
+  const loanAmount = Number(
+    activeSetting.defaultAmount || primaryProduct.defaultAmount || 10000
+  );
 
+  // 2. Admin-configured Monthly Interest Rate (% / Month)
+  const monthlyRateVal = Number(
+    activeSetting.monthlyInterestRate !== undefined && activeSetting.monthlyInterestRate !== null
+      ? activeSetting.monthlyInterestRate
+      : (activeSetting.baseInterestRate ? (activeSetting.baseInterestRate > 5 ? Math.round((activeSetting.baseInterestRate / 12) * 100) / 100 : activeSetting.baseInterestRate) : (primaryProduct.interestRate || 1))
+  );
+  const monthlyRateDisplay = `${monthlyRateVal}% / Month`;
+  const monthlyRateDecimal = monthlyRateVal / 100;
+
+  // 3. Admin-configured Available EMI Months
+  const availableTenures = useMemo(() => {
+    if (
+      Array.isArray(activeSetting.availableTenureMonths) &&
+      activeSetting.availableTenureMonths.length > 0
+    ) {
+      return activeSetting.availableTenureMonths.map(Number).sort((a, b) => a - b);
+    }
+    if (
+      Array.isArray(primaryProduct.availableTenureMonths) &&
+      primaryProduct.availableTenureMonths.length > 0
+    ) {
+      return primaryProduct.availableTenureMonths.map(Number).sort((a, b) => a - b);
+    }
+    return [3, 6, 9];
+  }, [activeSetting.availableTenureMonths, primaryProduct.availableTenureMonths]);
+
+  // Selected EMI tenure month
+  const [selectedTenure, setSelectedTenure] = useState('3');
+
+  // Uploaded documents
   const [documents, setDocuments] = useState({});
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -74,15 +94,6 @@ export function ApplyLoan() {
     setDocuments({});
     setFormErrors({});
     setError(null);
-    setFormData({
-      preferredTenureMonths: '3',
-      loanPurpose: 'Agricultural Inputs & Working Capital',
-      occupationType: 'Self-Employed / Small Business',
-      monthlyIncome: '',
-      employerOrBusinessName: '',
-      workAddress: '',
-      cibilScore: '',
-    });
 
     const loadPolicy = async () => {
       setLoading(true);
@@ -91,13 +102,18 @@ export function ApplyLoan() {
         const data = await fetchAvailableLoanProductsApi(token);
         if (isMounted) {
           setPolicyData(data);
+          const s = data.loanSetting || data.products?.[0] || {};
+          const ten = s.defaultTenureMonths
+            ? String(s.defaultTenureMonths)
+            : data.availableTenureMonths?.[0]
+            ? String(data.availableTenureMonths[0])
+            : '3';
+          setSelectedTenure(ten);
         }
       } catch (err) {
-        console.error('Failed to load loan products policy:', err);
+        console.error('Failed to load loan policy:', err);
         if (isMounted) {
-          setError(
-            err.message || 'Unable to retrieve loan policy. Please contact branch administrator.'
-          );
+          setError(err.message || 'Unable to load active loan policy.');
         }
       } finally {
         if (isMounted) setLoading(false);
@@ -105,59 +121,96 @@ export function ApplyLoan() {
     };
 
     loadPolicy();
+
     return () => {
       isMounted = false;
     };
   }, [token, memberUser?._id]);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (formErrors[name]) {
-      setFormErrors((prev) => ({ ...prev, [name]: null }));
-    }
-  };
-
+  // Handle document file select
   const handleFileChange = (field, file) => {
-    setDocuments((prev) => ({ ...prev, [field]: file }));
-    if (formErrors[field]) {
-      setFormErrors((prev) => ({ ...prev, [field]: null }));
+    if (file && file.size > 5 * 1024 * 1024) {
+      setFormErrors((prev) => ({
+        ...prev,
+        [field]: 'File size must be less than 5MB',
+      }));
+      return;
     }
+    setFormErrors((prev) => ({ ...prev, [field]: null }));
+    setDocuments((prev) => ({ ...prev, [field]: file }));
   };
 
+  // Live EMI calculation based on admin-set Amount, Interest Rate, and selected Month
+  const calculatedEmi = useMemo(() => {
+    const P = loanAmount;
+    const N = Number(selectedTenure) || 3;
+    const monthlyRate = monthlyRateDecimal;
+
+    let emi = 0;
+    let totalInterest = 0;
+
+    if (P > 0 && N > 0) {
+      if (monthlyRate > 0) {
+        emi = Math.round(
+          (P * monthlyRate * Math.pow(1 + monthlyRate, N)) /
+            (Math.pow(1 + monthlyRate, N) - 1)
+        );
+      } else {
+        emi = Math.round(P / N);
+      }
+      totalInterest = Math.max(0, Math.round(emi * N - P));
+    }
+
+    return {
+      principal: P,
+      tenure: N,
+      monthlyEmi: emi,
+      totalInterest,
+      totalRepayable: P + totalInterest,
+    };
+  }, [loanAmount, monthlyRateDecimal, selectedTenure]);
+
+  // Tenure option details with real-time calculated monthly EMI
+  const tenureCards = useMemo(() => {
+    const P = loanAmount;
+    const monthlyRate = monthlyRateDecimal;
+
+    return availableTenures.map((m) => {
+      let emi = 0;
+      if (P > 0 && m > 0) {
+        if (monthlyRate > 0) {
+          emi = Math.round(
+            (P * monthlyRate * Math.pow(1 + monthlyRate, m)) /
+              (Math.pow(1 + monthlyRate, m) - 1)
+          );
+        } else {
+          emi = Math.round(P / m);
+        }
+      }
+      const total = emi * m;
+      return {
+        months: m,
+        value: String(m),
+        monthlyEmi: emi,
+        totalRepayment: total,
+      };
+    });
+  }, [availableTenures, loanAmount, monthlyRateDecimal]);
+
+  // Form Validation: Only require identity proof (Aadhaar)
   const validateForm = () => {
     const errs = {};
-    const tenure = parseInt(formData.preferredTenureMonths, 10);
-    if (![3, 6, 9].includes(tenure)) {
-      errs.preferredTenureMonths = 'Please select a valid tenure: 3 Months, 6 Months, or 9 Months';
-    }
-
-    if (!formData.loanPurpose || !formData.loanPurpose.trim()) {
-      errs.loanPurpose = 'Loan purpose explanation is required';
-    }
-
-    const income = Number(formData.monthlyIncome);
-    if (
-      formData.monthlyIncome === '' ||
-      formData.monthlyIncome === undefined ||
-      isNaN(income) ||
-      income < 0
-    ) {
-      errs.monthlyIncome = 'Please provide a valid monthly income (₹)';
-    }
-
     if (!documents.aadhaar_card) {
-      errs.aadhaar_card = 'Identity proof (Aadhaar Card) is required';
+      errs.aadhaar_card = 'Identity proof (Aadhaar Card / ID) is required';
     }
-
     setFormErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
+  // Submit loan application
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
-      window.scrollTo({ top: 350, behavior: 'smooth' });
       return;
     }
 
@@ -165,16 +218,13 @@ export function ApplyLoan() {
     try {
       const payload = new FormData();
       payload.append('loanType', 'First Member Term Loan');
-      payload.append('requestedAmount', String(FIRST_LOAN_AMOUNT));
-      payload.append('preferredTenureMonths', formData.preferredTenureMonths);
-      payload.append('loanPurpose', formData.loanPurpose);
-      payload.append('occupationType', formData.occupationType);
-      payload.append('monthlyIncome', formData.monthlyIncome);
-      payload.append('employerOrBusinessName', formData.employerOrBusinessName);
-      payload.append('workAddress', formData.workAddress);
-      if (formData.cibilScore) {
-        payload.append('cibilScore', formData.cibilScore);
-      }
+      payload.append('requestedAmount', String(loanAmount));
+      payload.append('preferredTenureMonths', String(selectedTenure || availableTenures[0] || 3));
+      payload.append('loanPurpose', 'Statutory Member Term Loan Facility');
+      payload.append('occupationType', 'Member / Self-Employed');
+      payload.append('monthlyIncome', '25000');
+      payload.append('employerOrBusinessName', 'Member');
+      payload.append('workAddress', `${policyData.memberDistrict || 'Khurda'} District`);
 
       Object.entries(documents).forEach(([fieldName, file]) => {
         if (file) {
@@ -186,42 +236,18 @@ export function ApplyLoan() {
       setSubmittedApp(response.application);
     } catch (err) {
       console.error('Application submission error:', err);
-      alert(err.message || 'Submission failed. Please check form fields.');
+      alert(err.message || 'Submission failed. Please check your uploaded documents.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const tenureOptions = [
-    {
-      value: '3',
-      label: '3 Months',
-      tag: 'Short Term',
-      schedule: '3 Monthly Cycles',
-      desc: 'Short-term settlement plan with lower total interest accrued.',
-    },
-    {
-      value: '6',
-      label: '6 Months',
-      tag: 'Standard Plan',
-      schedule: '6 Monthly Cycles',
-      desc: 'Balanced installment plan suited for agriculture and small retail cycles.',
-    },
-    {
-      value: '9',
-      label: '9 Months',
-      tag: 'Flexible Tenure',
-      schedule: '9 Monthly Cycles',
-      desc: 'Comfortable installment spread across 9 monthly repayment cycles.',
-    },
-  ];
-
   return (
     <div className="space-y-6 sm:space-y-7 pb-12">
       {/* PAGE HEADER */}
       <MemberPageHeader
-        title="Apply for First Member Loan"
-        description="Statutory introductory loan facility of ₹10,000 for approved members. Select your preferred repayment tenure and attach required documents."
+        title="Apply for Loan"
+        description={`Statutory loan facility of ₹${loanAmount.toLocaleString('en-IN')} at ${monthlyRateDisplay}. Select your preferred EMI months and upload required verification documents.`}
         badge="APPROVED STATUTORY POLICY"
         breadcrumbs={[
           { label: 'Loan Services', path: '/member-dashboard/loans/overview' },
@@ -229,44 +255,49 @@ export function ApplyLoan() {
         ]}
       />
 
-      {/* SUCCESS MODAL */}
+      {/* SUCCESS MODAL ON SUBMISSION */}
       {submittedApp && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-emerald-100 text-center space-y-6 animate-fade-in">
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-              <CheckCircle2 className="w-10 h-10" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full text-center space-y-5 border border-slate-200 shadow-2xl">
+            <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border-2 border-emerald-200 shadow-inner">
+              <CheckCircle2 className="w-8 h-8" />
             </div>
 
-            <div className="space-y-2">
-              <span className="text-[11px] font-black tracking-widest text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full uppercase border border-emerald-200">
-                Application Successfully Submitted
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100/70 px-3 py-1 rounded-full border border-emerald-200">
+                Application Received Successfully
               </span>
-              <h3 className="text-2xl font-black text-slate-900 tracking-tight">
-                First Loan Application Received!
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight pt-1">
+                Loan Application Submitted!
               </h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Your application for <strong className="text-slate-900">₹10,000</strong> with{' '}
-                <strong className="text-slate-900">{submittedApp.preferredTenureMonths} Months</strong> tenure has been recorded in the credit registry.
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                Your loan dossier has been forwarded directly to Super Admin for final review and sanction.
               </p>
             </div>
 
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-left space-y-2 text-xs">
-              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
-                <span className="text-slate-500 font-semibold">Application Reference:</span>
-                <span className="font-mono font-black text-blue-700 text-sm">
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-left space-y-2.5 text-xs">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                <span className="text-slate-500 font-medium">Application ID</span>
+                <span className="font-mono font-black text-slate-900">
                   {submittedApp.applicationId}
                 </span>
               </div>
-              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
-                <span className="text-slate-500 font-semibold">Assigned Jurisdiction:</span>
-                <span className="font-bold text-slate-800">
-                  {submittedApp.district} District Administration
+              <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                <span className="text-slate-500 font-medium">Sanctioned Amount</span>
+                <span className="font-black text-slate-900">
+                  ₹{loanAmount.toLocaleString('en-IN')}
                 </span>
               </div>
-              <div className="flex justify-between items-center py-1">
-                <span className="text-slate-500 font-semibold">Current Lifecycle:</span>
-                <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                  Pending District Verification
+              <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                <span className="text-slate-500 font-medium">Repayment Tenure</span>
+                <span className="font-black text-blue-700">
+                  {submittedApp.preferredTenureMonths || selectedTenure} Months
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-medium">Estimated Monthly EMI</span>
+                <span className="font-black text-emerald-700">
+                  ₹{calculatedEmi.monthlyEmi.toLocaleString('en-IN')} / mo
                 </span>
               </div>
             </div>
@@ -275,10 +306,10 @@ export function ApplyLoan() {
               <button
                 type="button"
                 onClick={() => navigate('/member-dashboard/loans/track')}
-                className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2"
+                className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/25 transition-all flex items-center justify-center gap-1.5"
               >
-                <span>Track Application Status</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>Track Application</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
@@ -322,7 +353,7 @@ export function ApplyLoan() {
       )}
 
       {/* APPLICATION FORM */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
+      <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">
         {/* Form Title Banner */}
         <div className="p-5 sm:p-7 bg-slate-50/80 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-1">
@@ -331,77 +362,97 @@ export function ApplyLoan() {
                 <FilePlus2 className="w-4 h-4" />
               </div>
               <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-                First Member Loan Application Form
+                Member Loan Application Form
               </h3>
             </div>
             <p className="text-xs text-slate-500">
-              Routed to {policyData.memberDistrict} District Administration for on-ground KYC verification.
+              Configured under active administrative policy for {policyData.memberDistrict || 'Khurda'} District.
             </p>
           </div>
           <span className="text-xs font-black text-blue-700 bg-blue-50 px-3.5 py-1.5 rounded-full border border-blue-200 self-start sm:self-auto">
-            Fixed Amount: ₹10,000
+            Loan Amount: ₹{loanAmount.toLocaleString('en-IN')}
           </span>
         </div>
 
         <div className="p-5 sm:p-8 space-y-8">
-          {/* STEP 1: LOAN PARAMETERS & TENURE */}
-          <div className="space-y-4">
+          {/* SECTION 1: ADMIN-CONFIGURED LOAN DETAILS & EMI MONTH SELECTION */}
+          <div className="space-y-5">
             <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-              <span className="w-6 h-6 rounded-full bg-blue-50 text-blue-700 font-black text-xs flex items-center justify-center border border-blue-200">
+              <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center shadow-xs">
                 1
               </span>
               <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
-                Loan Amount & Tenure Selection
+                Loan Facility &amp; EMI Months Selection
               </h4>
             </div>
 
-            {/* Fixed ₹10,000 Card */}
-            <div className="bg-gradient-to-r from-blue-50/60 via-slate-50 to-white p-5 rounded-2xl border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  First Loan Facility
-                </span>
-                <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                  ₹{FIRST_LOAN_AMOUNT.toLocaleString('en-IN')}
-                </span>
-                <span className="text-[11px] text-slate-500 block mt-0.5">
-                  Fixed introductory amount under approved bylaws (cannot be altered).
-                </span>
+            {/* 3 Core Highlight Cards: Amount, Interest, Estimated EMI */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              {/* Card 1: Loan Amount */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+                <div className="flex items-center justify-between text-slate-400">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Loan Amount</span>
+                  <IndianRupee className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="text-2xl font-black text-slate-900 tracking-tight">
+                  ₹{loanAmount.toLocaleString('en-IN')}
+                </div>
+                <span className="text-[10px] text-slate-500 block">Sanctioned Principal</span>
               </div>
-              <div className="text-left sm:text-right space-y-1">
-                <span className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs font-black uppercase inline-block">
-                  11% / 12% CIBIL-Linked Rate*
-                </span>
-                <span className="text-[10px] text-slate-500 block">
-                  *Awaiting final client confirmation
+
+              {/* Card 2: Monthly Interest Rate */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+                <div className="flex items-center justify-between text-slate-400">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Monthly Interest Rate</span>
+                  <Percent className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="text-2xl font-black text-emerald-700 tracking-tight">
+                  {monthlyRateDisplay}
+                </div>
+                <span className="text-[10px] text-slate-500 block">Reducing balance calculation</span>
+              </div>
+
+              {/* Card 3: Monthly EMI */}
+              <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-1">
+                <div className="flex items-center justify-between text-blue-600">
+                  <span className="text-[10px] font-black uppercase tracking-wider">Estimated Monthly EMI</span>
+                  <Calculator className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="text-2xl font-black text-blue-700 tracking-tight">
+                  ₹{calculatedEmi.monthlyEmi.toLocaleString('en-IN')}
+                  <span className="text-xs text-blue-500 font-bold"> / mo</span>
+                </div>
+                <span className="text-[10px] text-blue-600 font-semibold block">
+                  For {selectedTenure} Months tenure
                 </span>
               </div>
             </div>
 
-            {/* Repayment Tenure Selection */}
+            {/* Select EMI Tenure Months */}
             <div className="space-y-2.5">
               <label className="text-xs font-bold text-slate-700 block">
-                Select Repayment Tenure <span className="text-rose-500">*</span>
+                Choose Repayment EMI Months: <span className="text-rose-500">*</span>
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                {tenureOptions.map((opt) => {
-                  const isSelected = formData.preferredTenureMonths === opt.value;
+                {tenureCards.map((card) => {
+                  const isSelected = selectedTenure === card.value;
                   return (
                     <div
-                      key={opt.value}
+                      key={card.value}
                       onClick={() =>
-                        !policyData.hasActivePending &&
-                        setFormData((prev) => ({ ...prev, preferredTenureMonths: opt.value }))
+                        !policyData.hasActivePending && setSelectedTenure(card.value)
                       }
                       className={`p-4 rounded-2xl border transition-all cursor-pointer space-y-2 ${
                         isSelected
-                          ? 'border-blue-600 bg-blue-50/50 ring-2 ring-blue-600/20 shadow-xs'
+                          ? 'border-blue-600 bg-blue-50/60 ring-2 ring-blue-600/20 shadow-sm'
                           : 'border-slate-200 bg-white hover:border-slate-300'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-slate-900">{opt.label}</span>
+                        <span className="text-sm font-black text-slate-900">
+                          {card.months} Months
+                        </span>
                         <span
                           className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
                             isSelected
@@ -409,211 +460,90 @@ export function ApplyLoan() {
                               : 'bg-slate-100 text-slate-600'
                           }`}
                         >
-                          {opt.tag}
+                          {isSelected ? 'Selected' : 'Select'}
                         </span>
                       </div>
-                      <div className="text-xs font-bold text-blue-700">{opt.schedule}</div>
-                      <p className="text-[11px] text-slate-500 leading-snug">{opt.desc}</p>
+                      <div className="text-base font-black text-emerald-700">
+                        ₹{card.monthlyEmi.toLocaleString('en-IN')}{' '}
+                        <span className="text-[10px] text-slate-500 font-normal">/ month</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 flex justify-between pt-1 border-t border-slate-100">
+                        <span>Total Repayment:</span>
+                        <span className="font-bold text-slate-800">
+                          ₹{card.totalRepayment.toLocaleString('en-IN')}
+                        </span>
+                      </div>
                     </div>
                   );
                 })}
               </div>
-
-              {formErrors.preferredTenureMonths && (
-                <p className="text-[11px] text-rose-500 font-semibold">
-                  {formErrors.preferredTenureMonths}
-                </p>
-              )}
             </div>
 
-            {/* Loan Purpose */}
-            <div className="space-y-1.5 pt-2">
-              <label className="text-xs font-bold text-slate-700">
-                Loan Purpose <span className="text-rose-500">*</span>
-              </label>
-              <textarea
-                name="loanPurpose"
-                rows={2}
-                value={formData.loanPurpose}
-                onChange={handleInputChange}
-                disabled={policyData.hasActivePending}
-                placeholder="Clearly state how the loan funds will be utilized (e.g. Agricultural equipment, seasonal inventory, store capital, trade purchase)."
-                className="w-full text-xs font-normal p-3.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 bg-slate-50/50 hover:bg-white"
-              />
-              {formErrors.loanPurpose && (
-                <p className="text-[11px] text-rose-500 font-semibold">{formErrors.loanPurpose}</p>
-              )}
-            </div>
-          </div>
-
-          {/* STEP 2: EMPLOYMENT & INCOME */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-              <span className="w-6 h-6 rounded-full bg-blue-50 text-blue-700 font-black text-xs flex items-center justify-center border border-blue-200">
-                2
-              </span>
-              <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
-                Occupation & Income Particulars
-              </h4>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Occupation Category</label>
-                <select
-                  name="occupationType"
-                  value={formData.occupationType}
-                  onChange={handleInputChange}
-                  disabled={policyData.hasActivePending}
-                  className="w-full text-xs font-semibold px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 bg-white"
-                >
-                  <option value="Self-Employed / Small Business">Self-Employed / Small Business</option>
-                  <option value="Agriculture / Allied Sector">Agriculture / Allied Sector</option>
-                  <option value="Salaried (Private / Govt)">Salaried (Private / Govt)</option>
-                  <option value="Artisan / Skilled Worker">Artisan / Skilled Worker</option>
-                  <option value="Daily Wage / Other">Daily Wage / Other</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">
-                  Approx. Monthly Income (₹) <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">₹</span>
-                  <input
-                    type="number"
-                    name="monthlyIncome"
-                    value={formData.monthlyIncome}
-                    onChange={handleInputChange}
-                    disabled={policyData.hasActivePending}
-                    placeholder="e.g. 25000"
-                    className="w-full text-xs font-semibold pl-7 pr-3 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
-                  />
+            {/* Quick Summary Card */}
+            <div className="p-4 rounded-2xl bg-linear-to-r from-blue-900 to-indigo-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-wider text-cyan-200">
+                  Total Loan Breakdown
+                </span>
+                <div className="flex flex-wrap items-center gap-4 text-xs">
+                  <div>
+                    <span className="text-blue-200 text-[10px] block">Principal</span>
+                    <strong className="text-white text-base">
+                      ₹{calculatedEmi.principal.toLocaleString('en-IN')}
+                    </strong>
+                  </div>
+                  <span className="text-blue-400 font-bold">+</span>
+                  <div>
+                    <span className="text-blue-200 text-[10px] block">Total Interest ({monthlyRateDisplay})</span>
+                    <strong className="text-amber-300 text-base">
+                      ₹{calculatedEmi.totalInterest.toLocaleString('en-IN')}
+                    </strong>
+                  </div>
+                  <span className="text-blue-400 font-bold">=</span>
+                  <div>
+                    <span className="text-blue-200 text-[10px] block">Total Repayable ({selectedTenure} mos)</span>
+                    <strong className="text-emerald-300 text-base">
+                      ₹{calculatedEmi.totalRepayable.toLocaleString('en-IN')}
+                    </strong>
+                  </div>
                 </div>
-                {formErrors.monthlyIncome && (
-                  <p className="text-[11px] text-rose-500 font-semibold">
-                    {formErrors.monthlyIncome}
-                  </p>
-                )}
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Enterprise / Employer Name</label>
-                <input
-                  type="text"
-                  name="employerOrBusinessName"
-                  value={formData.employerOrBusinessName}
-                  onChange={handleInputChange}
-                  disabled={policyData.hasActivePending}
-                  placeholder="e.g. Maa Tarini Enterprise"
-                  className="w-full text-xs font-semibold px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Work / Trade Address</label>
-                <input
-                  type="text"
-                  name="workAddress"
-                  value={formData.workAddress}
-                  onChange={handleInputChange}
-                  disabled={policyData.hasActivePending}
-                  placeholder="e.g. Market Chowk, Khurda"
-                  className="w-full text-xs font-semibold px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
-                />
+              <div className="text-left sm:text-right">
+                <span className="text-[10px] font-bold text-blue-200 uppercase block">Monthly Payment</span>
+                <span className="text-2xl font-black text-emerald-400">
+                  ₹{calculatedEmi.monthlyEmi.toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] text-blue-300 block">per month</span>
               </div>
             </div>
           </div>
 
-          {/* STEP 3: CIBIL SCORE & VERIFICATION */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-              <span className="w-6 h-6 rounded-full bg-blue-50 text-blue-700 font-black text-xs flex items-center justify-center border border-blue-200">
-                3
-              </span>
-              <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
-                CIBIL Score & Proposed Interest Tiers
-              </h4>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80">
-                <div className="space-y-0.5">
-                  <span className="text-xs font-bold text-slate-900 block">
-                    Confirmed Policy Interest Tiers (Reducing Balance)
-                  </span>
-                  <p className="text-[11px] text-slate-500">
-                    Official interest rate tier is verified based on your CIBIL credit score:
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <span className="px-3 py-1 rounded-lg text-[10px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200">
-                    CIBIL &gt; 600: 11% p.a.
-                  </span>
-                  <span className="px-3 py-1 rounded-lg text-[10px] font-black bg-blue-50 text-blue-800 border border-blue-200">
-                    CIBIL &le; 600: 12% p.a.
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 block">
-                    Self-Reported CIBIL Score <span className="text-slate-400 font-normal">(Optional, 300 - 900)</span>
-                  </label>
-                  <input
-                    type="number"
-                    name="cibilScore"
-                    value={formData.cibilScore}
-                    onChange={handleInputChange}
-                    disabled={policyData.hasActivePending}
-                    min="300"
-                    max="900"
-                    placeholder="e.g. 680 (leave blank if unknown)"
-                    className="w-full text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 bg-white"
-                  />
-                  <span className="text-[10px] text-slate-400 block">
-                    If unknown, official CIBIL score will be verified during administrative underwriting.
-                  </span>
-                </div>
-
-                <div className="p-3.5 bg-amber-50/80 rounded-xl border border-amber-200/70 text-[11px] text-amber-900 space-y-1">
-                  <span className="font-bold flex items-center gap-1.5">
-                    <Info className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                    Interest Calculation Policy Notice
-                  </span>
-                  <p className="leading-relaxed">
-                    Management has specified 11% for CIBIL &gt; 600 and 12% for CIBIL &le; 600. Complete interest rules and official repayment schedules are awaiting final confirmation before EMI collection begins.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* STEP 4: REQUIRED VERIFICATION DOCUMENTS */}
+          {/* SECTION 2: UPLOAD REQUIRED DOCUMENTS ONLY */}
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-blue-50 text-blue-700 font-black text-xs flex items-center justify-center border border-blue-200">
-                  4
+                <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center shadow-xs">
+                  2
                 </span>
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
-                  Required Verification Documents
+                  Upload Required Verification Documents
                 </h4>
               </div>
               <span className="text-[11px] text-slate-400 font-mono">PDF, JPG, PNG (Max 5MB)</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Aadhaar */}
+              {/* 1. Aadhaar Card (Required) */}
               <div className="border border-dashed border-slate-300 rounded-2xl p-4 bg-slate-50/50 hover:bg-white hover:border-blue-400 transition-all space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-800">
-                    Aadhaar / ID Card <span className="text-rose-500">*</span>
+                    Aadhaar Card / ID <span className="text-rose-500">*</span>
                   </span>
-                  {documents.aadhaar_card && (
+                  {documents.aadhaar_card ? (
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <UploadCloud className="w-4 h-4 text-slate-400" />
                   )}
                 </div>
                 <p className="text-[10px] text-slate-500">Government identity verification</p>
@@ -631,11 +561,15 @@ export function ApplyLoan() {
                 )}
               </div>
 
-              {/* PAN */}
+              {/* 2. PAN Card */}
               <div className="border border-dashed border-slate-300 rounded-2xl p-4 bg-slate-50/50 hover:bg-white hover:border-blue-400 transition-all space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-800">PAN Card / Form 60</span>
-                  {documents.pan_card && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+                  {documents.pan_card ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <UploadCloud className="w-4 h-4 text-slate-400" />
+                  )}
                 </div>
                 <p className="text-[10px] text-slate-500">Tax identification proof</p>
                 <input
@@ -647,15 +581,17 @@ export function ApplyLoan() {
                 />
               </div>
 
-              {/* Bank Statement */}
+              {/* 3. Bank Statement */}
               <div className="border border-dashed border-slate-300 rounded-2xl p-4 bg-slate-50/50 hover:bg-white hover:border-blue-400 transition-all space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-800">Bank Statement</span>
-                  {documents.bank_statement && (
+                  {documents.bank_statement ? (
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <UploadCloud className="w-4 h-4 text-slate-400" />
                   )}
                 </div>
-                <p className="text-[10px] text-slate-500">Last 3 months or passbook</p>
+                <p className="text-[10px] text-slate-500">Passbook or last 3 months</p>
                 <input
                   type="file"
                   accept=".pdf,image/*"
@@ -665,11 +601,15 @@ export function ApplyLoan() {
                 />
               </div>
 
-              {/* Income Proof */}
+              {/* 4. Photo / Income Proof */}
               <div className="border border-dashed border-slate-300 rounded-2xl p-4 bg-slate-50/50 hover:bg-white hover:border-blue-400 transition-all space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-800">Income Declaration</span>
-                  {documents.income_proof && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+                  <span className="text-xs font-bold text-slate-800">Photo / Income Proof</span>
+                  {documents.income_proof ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <UploadCloud className="w-4 h-4 text-slate-400" />
+                  )}
                 </div>
                 <p className="text-[10px] text-slate-500">Self-declaration or bill</p>
                 <input
@@ -683,91 +623,39 @@ export function ApplyLoan() {
             </div>
           </div>
 
-          {/* STEP 5: PRE-SUBMISSION SUMMARY */}
-          <div className="p-5 rounded-2xl bg-blue-50/60 border border-blue-200/80 space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center">
-                5
-              </span>
-              <h4 className="text-xs font-black uppercase tracking-wider text-blue-950">
-                Application Summary (Review Before Final Submission)
-              </h4>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white p-4 rounded-xl border border-blue-100 text-xs">
-              <div>
-                <span className="text-[10px] text-slate-400 font-bold uppercase block">
-                  Loan Amount
-                </span>
-                <span className="text-base font-black text-slate-900">
-                  ₹{FIRST_LOAN_AMOUNT.toLocaleString('en-IN')}
-                </span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-400 font-bold uppercase block">
-                  Selected Tenure
-                </span>
-                <span className="text-base font-black text-blue-700">
-                  {formData.preferredTenureMonths} Months
-                </span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-400 font-bold uppercase block">
-                  Proposed Interest Tier
-                </span>
-                <span className="text-xs font-black text-slate-900 block truncate">
-                  {formData.cibilScore
-                    ? Number(formData.cibilScore) > 600
-                      ? '11% p.a. (>600)'
-                      : '12% p.a. (<=600)'
-                    : '11% / 12% CIBIL*'}
-                </span>
-                <span className="text-[9px] text-slate-500 block leading-tight mt-0.5">
-                  *Pending policy sign-off
-                </span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-400 font-bold uppercase block">
-                  Routing Branch
-                </span>
-                <span className="text-base font-black text-slate-900 truncate block">
-                  {policyData.memberDistrict} District
-                </span>
-              </div>
-            </div>
-
-            <p className="text-[11px] text-slate-600 leading-relaxed">
-              By submitting this dossier, you confirm that your declared occupational and identity information is authentic and subject to on-ground verification by your assigned District Administration.
+          {/* SUBMISSION & ACTIONS */}
+          <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-[11px] text-slate-500 text-center sm:text-left">
+              By submitting, you apply for a loan facility of ₹{loanAmount.toLocaleString('en-IN')} for {selectedTenure} months at {monthlyRateDisplay}.
             </p>
-          </div>
 
-          {/* SUBMIT BUTTON */}
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => navigate('/member-dashboard/loans/overview')}
-              className="py-3 px-5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs transition-colors"
-            >
-              Cancel
-            </button>
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                onClick={() => navigate('/member-dashboard/loans/overview')}
+                className="py-3 px-5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs transition-colors"
+              >
+                Cancel
+              </button>
 
-            <button
-              type="submit"
-              disabled={submitting || policyData.hasActivePending}
-              className="py-3.5 px-7 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-95 disabled:opacity-50 text-white font-black text-xs shadow-md shadow-blue-600/25 transition-all flex items-center gap-2 cursor-pointer"
-            >
-              {submitting ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Submitting Application...</span>
-                </>
-              ) : (
-                <>
-                  <FilePlus2 className="w-4 h-4" />
-                  <span>Submit First Loan Application (₹10,000)</span>
-                </>
-              )}
-            </button>
+              <button
+                type="submit"
+                disabled={submitting || policyData.hasActivePending}
+                className="py-3.5 px-7 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-95 disabled:opacity-50 text-white font-black text-xs shadow-md shadow-blue-600/25 transition-all flex items-center gap-2 cursor-pointer"
+              >
+                {submitting ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Submitting Application...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileCheck className="w-4 h-4" />
+                    <span>Submit Loan Application (₹{loanAmount.toLocaleString('en-IN')})</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </form>

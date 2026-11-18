@@ -13,6 +13,7 @@ import {
   Mail,
   Building2,
   ShieldCheck,
+  UserCheck,
   FileText,
   Clock,
   Maximize2
@@ -268,31 +269,78 @@ export function PaymentReceiptModal({
             {/* ACTION CALL TO ACTION BOX */}
             <div className="space-y-2 pt-1">
               {isPending ? (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
+                  {/* ROLE SELECTION */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-2.5 space-y-2">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                        Choose Approval Role
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-500">
+                        Selected: <strong className="text-slate-900">{approvalRole === 'associate' ? 'Associate' : 'Member'}</strong>
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setApprovalRole('member')}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2 ${
+                          approvalRole === 'member'
+                            ? 'border-emerald-600 bg-emerald-50 text-emerald-900 ring-2 ring-emerald-500/20 font-bold'
+                            : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700'
+                        }`}
+                      >
+                        <UserCheck className={`w-4 h-4 shrink-0 ${approvalRole === 'member' ? 'text-emerald-600' : 'text-slate-400'}`} />
+                        <div>
+                          <div className="text-xs font-black">Member</div>
+                          <div className="text-[9px] text-slate-400">Regular Member</div>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setApprovalRole('associate')}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2 ${
+                          approvalRole === 'associate'
+                            ? 'border-blue-600 bg-blue-50 text-blue-900 ring-2 ring-blue-500/20 font-bold'
+                            : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700'
+                        }`}
+                      >
+                        <ShieldCheck className={`w-4 h-4 shrink-0 ${approvalRole === 'associate' ? 'text-blue-600' : 'text-slate-400'}`} />
+                        <div>
+                          <div className="text-xs font-black">Associate</div>
+                          <div className="text-[9px] text-slate-400">Associate Member</div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* SINGLE APPROVE BUTTON */}
                   <button
                     type="button"
                     disabled={isProcessing}
-                    onClick={() => onApprove && onApprove(app)}
-                    className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-[#00C853] hover:bg-emerald-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 transition-all cursor-pointer disabled:opacity-50"
+                    onClick={() => onApprove && onApprove(app, approvalRole)}
+                    className={`w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-2xl text-white font-black text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer disabled:opacity-50 ${
+                      approvalRole === 'associate'
+                        ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
+                        : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
+                    }`}
                   >
                     {isProcessing ? (
-                      <>
-                        <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
-                        <span>Approving Application...</span>
-                      </>
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    ) : approvalRole === 'associate' ? (
+                      <ShieldCheck className="w-4 h-4 text-white" />
                     ) : (
-                      <>
-                        <CheckCircle2 className="w-4 h-4 text-slate-950" />
-                        <span>APPROVE APPLICATION NOW</span>
-                      </>
+                      <UserCheck className="w-4 h-4 text-white" />
                     )}
+                    <span>{approvalRole === 'associate' ? 'Approve as Associate' : 'Approve as Member'}</span>
                   </button>
 
                   <button
                     type="button"
                     disabled={isProcessing}
                     onClick={() => onReject && onReject(app)}
-                    className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs transition-colors cursor-pointer"
+                    className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs transition-colors cursor-pointer disabled:opacity-50"
                   >
                     <XCircle className="w-3.5 h-3.5" />
                     <span>Reject / Request Correction</span>

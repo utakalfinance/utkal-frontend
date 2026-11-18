@@ -20,6 +20,11 @@ async function getAuthHeaders(isMultipart = false) {
     }
   }
 
+  // Fallback to associate/member token if admin token is not present
+  if (!token && typeof localStorage !== 'undefined') {
+    token = localStorage.getItem('utkal_member_token') || localStorage.getItem('utkal_token') || '';
+  }
+
   const headers = {};
   if (!isMultipart) {
     headers['Content-Type'] = 'application/json';
@@ -588,4 +593,63 @@ export async function verifyInvestmentPaymentApi(id, investmentRecordId, adminRe
   }
   return data;
 }
+
+/**
+ * Associate Member Approves Investor -> Advances to Admin Approval
+ * POST /api/investors/:id/associate-approve
+ */
+export async function associateApproveInvestorApi(id, remarks = '') {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${apiConfig.baseURL}/investors/${id}/associate-approve`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ remarks }),
+  });
+
+  const data = await response.json();
+  if (response.status === 401) handleUnauthorizedResponse(401, data.message);
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || 'Failed to approve investor');
+  }
+  return data;
+}
+
+/**
+ * Super Admin Final Approval
+ * POST /api/investors/:id/final-approve
+ */
+export async function finalApproveInvestorApi(id, remarks = '') {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${apiConfig.baseURL}/investors/${id}/final-approve`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ remarks }),
+  });
+
+  const data = await response.json();
+  if (response.status === 401) handleUnauthorizedResponse(401, data.message);
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || 'Failed to give final approval to investor');
+  }
+  return data;
+}
+
+/**
+ * Fetch List of Active Associate Members for assignment dropdown (Admin Only)
+ * GET /api/investors/associates-list
+ */
+export async function getAssociatesListApi() {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${apiConfig.baseURL}/investors/associates-list`, {
+    headers,
+  });
+
+  const data = await response.json();
+  if (response.status === 401) handleUnauthorizedResponse(401, data.message);
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || 'Failed to fetch associate members list');
+  }
+  return data.associates || [];
+}
+
 

@@ -17,6 +17,8 @@ import { ErrorBoundary } from '../../components/common/ErrorBoundary';
 import {
   getInvestorStatsApi,
   getInvestorsApi,
+  finalApproveInvestorApi,
+  getAssociatesListApi,
 } from '../../services/investorService';
 
 export function InvestorManagement() {
@@ -36,6 +38,7 @@ export function InvestorManagement() {
 
   // Table Data State
   const [investors, setInvestors] = useState([]);
+  const [associates, setAssociates] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -47,6 +50,7 @@ export function InvestorManagement() {
     kycStatus: 'All',
     paymentStatus: 'All',
     planStatus: 'All',
+    associateId: 'All',
   });
   const [activeStatCard, setActiveStatCard] = useState('');
 
@@ -113,6 +117,13 @@ export function InvestorManagement() {
     fetchStats();
     fetchInvestors();
   }, [fetchStats, fetchInvestors]);
+
+  // Fetch active Associate Members for assignment filter
+  useEffect(() => {
+    getAssociatesListApi()
+      .then((data) => setAssociates(data || []))
+      .catch((err) => console.warn('Failed to load associates list:', err));
+  }, []);
 
   // Handle Filter Change
   const handleFilterChange = (key, value) => {
@@ -181,6 +192,19 @@ export function InvestorManagement() {
       });
     }
     setPage(1);
+  };
+
+  // Super Admin Final Approval
+  const handleFinalApprove = async (investor) => {
+    if (!window.confirm(`Grant final approval to investor ${investor.fullName} (${investor.investorId})? This will fully activate their profile.`)) return;
+    try {
+      await finalApproveInvestorApi(investor._id || investor.investorId, 'Super Admin Final Approval');
+      showToast('success', `Investor ${investor.fullName} successfully approved and activated!`);
+      fetchStats();
+      fetchInvestors();
+    } catch (err) {
+      showToast('error', err.message || 'Failed to grant final approval.');
+    }
   };
 
   // Open Details Modal (View action)
@@ -331,7 +355,9 @@ export function InvestorManagement() {
           onRefresh={() => fetchInvestors(true)}
           onViewInvestor={handleViewInvestor}
           onEditInvestor={handleEditInvestor}
+          onFinalApprove={handleFinalApprove}
           onAddNew={handleAddNew}
+          associates={associates}
         />
       </div>
 

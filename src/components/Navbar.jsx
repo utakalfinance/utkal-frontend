@@ -30,6 +30,20 @@ export function Navbar({ onOpenApplyModal }) {
   const { isAuthenticated: isAdmin } = useAdmin();
   const { isAuthenticated: isMember, memberUser } = useMemberAuth();
 
+  // Associate session state
+  const isAssociate =
+    isMember &&
+    (memberUser?.role === 'associate' ||
+      (() => {
+        try {
+          const raw = localStorage.getItem('utkal_member_user');
+          const u = raw ? JSON.parse(raw) : null;
+          return u?.role === 'associate';
+        } catch {
+          return false;
+        }
+      })());
+
   // District Admin session state
   const [districtAdminUser, setDistrictAdminUser] = useState(() => {
     try {
@@ -152,21 +166,21 @@ export function Navbar({ onOpenApplyModal }) {
           </Link>
 
           <Link
-            to="/loans"
-            className={`text-xs xl:text-sm font-bold transition-colors whitespace-nowrap ${
-              isActive('/loans') ? 'text-blue-700 font-extrabold' : 'text-slate-700 hover:text-blue-700'
-            }`}
-          >
-            Loans
-          </Link>
-
-          <Link
             to="/register"
             className={`text-xs xl:text-sm font-bold transition-colors whitespace-nowrap ${
               isActive('/register') ? 'text-blue-700 font-extrabold' : 'text-slate-700 hover:text-blue-700'
             }`}
           >
             Become a Member
+          </Link>
+
+          <Link
+            to="/loans"
+            className={`text-xs xl:text-sm font-bold transition-colors whitespace-nowrap ${
+              isActive('/loans') ? 'text-blue-700 font-extrabold' : 'text-slate-700 hover:text-blue-700'
+            }`}
+          >
+            Loans
           </Link>
 
           <Link
@@ -276,6 +290,15 @@ export function Navbar({ onOpenApplyModal }) {
               <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
               <span>District</span>
             </Link>
+          ) : isAssociate ? (
+            <Link
+              to="/associate-dashboard"
+              className="text-xs xl:text-sm font-bold text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-3.5 py-2 rounded-xl transition-all border border-emerald-300 shadow-xs whitespace-nowrap flex items-center gap-1.5 hover:shadow-sm"
+              title="Associate Member Dashboard"
+            >
+              <LayoutDashboard className="w-3.5 h-3.5 text-emerald-700" />
+              <span>{memberUser?.name ? memberUser.name.split(' ')[0] : 'Associate'}</span>
+            </Link>
           ) : isMember ? (
             <Link
               to="/member-dashboard"
@@ -330,17 +353,6 @@ export function Navbar({ onOpenApplyModal }) {
             </Link>
 
             <Link
-              to="/loans"
-              onClick={() => setMobileMenuOpen(false)}
-              className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold ${
-                isActive('/loans') ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              <span>Loans</span>
-              <ChevronRight className="w-4 h-4 text-slate-400" />
-            </Link>
-
-            <Link
               to="/register"
               onClick={() => setMobileMenuOpen(false)}
               className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold ${
@@ -348,6 +360,17 @@ export function Navbar({ onOpenApplyModal }) {
               }`}
             >
               <span>Become a Member</span>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            </Link>
+
+            <Link
+              to="/loans"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold ${
+                isActive('/loans') ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <span>Loans</span>
               <ChevronRight className="w-4 h-4 text-slate-400" />
             </Link>
 
@@ -455,6 +478,15 @@ export function Navbar({ onOpenApplyModal }) {
               >
                 <ShieldCheck className="w-4 h-4 text-blue-600" />
                 <span>District Portal</span>
+              </Link>
+            ) : isAssociate ? (
+              <Link
+                to="/associate-dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-sm transition-colors border border-emerald-300 shadow-xs"
+              >
+                <LayoutDashboard className="w-4 h-4 text-emerald-700" />
+                <span>{memberUser?.name ? `${memberUser.name} (Associate Dashboard)` : 'Associate Dashboard'}</span>
               </Link>
             ) : isMember ? (
               <Link

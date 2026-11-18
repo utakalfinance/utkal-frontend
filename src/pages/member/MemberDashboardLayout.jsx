@@ -22,7 +22,7 @@ export function MemberDashboardLayout() {
 
   const mainContentRef = useRef(null);
 
-  // Redirect to login if unauthenticated or rejected
+  // Redirect to login if unauthenticated or rejected, or redirect to appropriate dashboard based on role
   useEffect(() => {
     if (!isLoading) {
       if (!isAuthenticated || application?.status === 'rejected' || (memberUser && memberUser.status !== 'active')) {
@@ -30,6 +30,29 @@ export function MemberDashboardLayout() {
           logout();
         }
         navigate('/login', { replace: true });
+        return;
+      }
+
+      // If user is an associate, admin, or district partner, redirect them to their specific portal
+      const role = memberUser?.role || (() => {
+        try {
+          return JSON.parse(localStorage.getItem('utkal_member_user') || '{}')?.role;
+        } catch {
+          return null;
+        }
+      })();
+
+      if (role === 'associate') {
+        navigate('/associate-dashboard', { replace: true });
+        return;
+      }
+      if (['admin', 'super_admin'].includes(role)) {
+        navigate('/admin-dashboard', { replace: true });
+        return;
+      }
+      if (role === 'district_admin') {
+        navigate('/district-dashboard', { replace: true });
+        return;
       }
     }
   }, [isAuthenticated, isLoading, application, memberUser, logout, navigate]);

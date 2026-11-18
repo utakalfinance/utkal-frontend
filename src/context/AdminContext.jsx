@@ -652,7 +652,7 @@ export const AdminProvider = ({ children }) => {
     setIsAuthenticated(false);
   };
 
-  const updateApplicationStatus = async (idOrMongoId, newStatus) => {
+  const updateApplicationStatus = async (idOrMongoId, newStatus, role = null) => {
     const target = applications.find(
       (a) => a._id === idOrMongoId || a.id === idOrMongoId || a.applicationId === idOrMongoId
     );
@@ -661,7 +661,7 @@ export const AdminProvider = ({ children }) => {
     const targetStatus = newStatus.toLowerCase();
 
     // Call API: PATCH http://localhost:5000/api/applications/${mongoId}/status
-    const apiResult = await updateApplicationStatusApi(mongoId, targetStatus);
+    const apiResult = await updateApplicationStatusApi(mongoId, targetStatus, role);
 
     // Update local state without full page reload
     const updatedDoc = apiResult.application || {};

@@ -231,34 +231,6 @@ export function AssignPlanModal({ isOpen, onClose, investor, onSuccess }) {
               </div>
             </div>
 
-            {/* Contractual Percentage */}
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Contractual Percentage (%)</label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                value={contractualPercentage}
-                onChange={(e) => setContractualPercentage(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold text-slate-900"
-              />
-            </div>
-
-            {/* Percentage Basis */}
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Percentage Calculation Basis</label>
-              <select
-                value={percentageBasis}
-                onChange={(e) => setPercentageBasis(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold text-slate-900"
-              >
-                <option value="Total Contractual Percentage">Total Contractual Percentage</option>
-                <option value="Annual">Annual</option>
-                <option value="Monthly">Monthly</option>
-                <option value="None">None (Multiplier Only)</option>
-              </select>
-            </div>
-
             {/* Duration */}
             <div>
               <label className="block font-bold text-slate-700 mb-1">Plan Duration (Months)</label>

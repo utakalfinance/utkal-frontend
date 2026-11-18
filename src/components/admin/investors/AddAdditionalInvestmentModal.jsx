@@ -406,31 +406,6 @@ export function AddAdditionalInvestmentModal({ isOpen, onClose, investor, onSucc
                 </select>
               </div>
 
-              {/* Percentage & Basis */}
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Contractual Percentage (%)</label>
-                <input
-                  type="number"
-                  value={formData.contractualPercentage}
-                  onChange={(e) => setFormData({ ...formData, contractualPercentage: Number(e.target.value) })}
-                  className="w-full p-2 rounded-xl border border-slate-200 font-bold text-slate-800"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Percentage Calculation Basis</label>
-                <select
-                  value={formData.percentageBasis}
-                  onChange={(e) => setFormData({ ...formData, percentageBasis: e.target.value })}
-                  className="w-full p-2 rounded-xl border border-slate-200 font-semibold text-slate-800 bg-white"
-                >
-                  <option value="Total Contractual Percentage">Total Contractual Percentage</option>
-                  <option value="Annual">Annual Basis</option>
-                  <option value="Monthly">Monthly Basis</option>
-                  <option value="None">None</option>
-                </select>
-              </div>
-
               {/* Duration in Months */}
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Plan Duration (Months)</label>

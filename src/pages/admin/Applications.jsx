@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Download, CheckCircle2, XCircle, FileText, UserPlus, Filter, Trash2 } from 'lucide-react';
+import { Search, Download, CheckCircle2, XCircle, FileText, UserPlus, Filter, Trash2, UserCheck, ShieldCheck, Mail, Phone, User, FileCheck } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import { ApplicationTable } from '../../components/admin/ApplicationTable';
 import { EditApplicationModal } from '../../components/admin/EditApplicationModal';
 import { PaymentReceiptModal } from '../../components/admin/PaymentReceiptModal';
+import { ErrorBoundary } from '../../components/common/ErrorBoundary';
 import { getDistrictsApi } from '../../services/districtService';
 
 export function Applications() {
@@ -26,7 +27,8 @@ export function Applications() {
   const [selectedApp, setSelectedApp] = useState(null);
   const [selectedReceiptApp, setSelectedReceiptApp] = useState(null);
   const [editingApp, setEditingApp] = useState(null);
-  const [actionType, setActionType] = useState(null); // 'Approve' or 'Reject'
+  const [actionType, setActionType] = useState(null); // 'Approve', 'Reject', or 'Delete'
+  const [approvalRole, setApprovalRole] = useState('member'); // 'member' or 'associate'
   const [isProcessing, setIsProcessing] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -197,9 +199,15 @@ export function Applications() {
     return matchesSearch && matchesStatus && matchesBranch;
   });
 
-  const handleOpenModal = (app, type) => {
+  const handleOpenModal = (app, type, role = null) => {
     setSelectedApp(app);
     setActionType(type);
+    if (type === 'Approve') {
+      const preferredRole = role || (app?.membershipDetails?.membershipType === 'associate' || app?.role === 'associate' ? 'associate' : 'member');
+      setApprovalRole(preferredRole);
+    } else {
+      setApprovalRole('member');
+    }
     setErrorMessage('');
   };
 
@@ -210,21 +218,25 @@ export function Applications() {
       setIsProcessing(true);
       setErrorMessage('');
 
+      // Prevent duplicate approval if already approved
+      if (actionType === 'Approve' && (selectedApp.status || '').toLowerCase() === 'approved') {
+        setErrorMessage('This application has already been approved.');
+        setIsProcessing(false);
+        return;
+      }
+
       // Use MongoDB document _id
       const mongoId = selectedApp._id || selectedApp.id;
 
       if (actionType === 'Delete') {
         await deleteApplication(mongoId);
         setSuccessMessage(`Application ${selectedApp.applicantName || selectedApp.id} was deleted successfully.`);
+      } else if (actionType === 'Approve') {
+        await updateApplicationStatus(mongoId, 'approved', approvalRole);
+        setSuccessMessage(`Application approved successfully as ${approvalRole === 'associate' ? 'Associate Member' : 'Member'}.`);
       } else {
-        const targetStatus = actionType === 'Approve' ? 'approved' : 'rejected';
-        await updateApplicationStatus(mongoId, targetStatus);
-
-        if (actionType === 'Approve') {
-          setSuccessMessage('Application approved successfully.');
-        } else {
-          setSuccessMessage(`Application ${actionType.toLowerCase()}d successfully.`);
-        }
+        await updateApplicationStatus(mongoId, 'rejected');
+        setSuccessMessage(`Application ${selectedApp.applicantName || selectedApp.id} was rejected.`);
       }
 
       setSelectedApp(null);
@@ -241,14 +253,14 @@ export function Applications() {
     }
   };
 
-  const handleReceiptApprove = async (app) => {
+  const handleReceiptApprove = async (app, role = 'member') => {
     if (!app) return;
     try {
       setIsProcessing(true);
       setErrorMessage('');
       const mongoId = app._id || app.id;
-      await updateApplicationStatus(mongoId, 'approved');
-      setSuccessMessage(`Application for ${app.applicantName} approved successfully.`);
+      await updateApplicationStatus(mongoId, 'approved', role);
+      setSuccessMessage(`Application for ${app.applicantName} approved successfully as ${role === 'associate' ? 'Associate Member' : 'Member'}.`);
       setSelectedReceiptApp(null);
       setTimeout(() => {
         setSuccessMessage('');
@@ -817,7 +829,7 @@ export function Applications() {
         <ApplicationTable
           applications={filtered}
           districts={createdDistricts}
-          onApprove={(app) => handleOpenModal(app, 'Approve')}
+          onApprove={(app, role) => handleOpenModal(app, 'Approve', role)}
           onReject={(app) => handleOpenModal(app, 'Reject')}
           onEdit={(app) => setEditingApp(app)}
           onViewReceipt={(app) => setSelectedReceiptApp(app)}
@@ -843,16 +855,19 @@ export function Applications() {
       {/* CONFIRMATION MODAL */}
       {selectedApp && actionType && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs select-none">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 sm:p-8 max-w-md w-full space-y-5 animate-fade-in text-left">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 sm:p-7 max-w-lg w-full space-y-4 animate-fade-in text-left">
             <div className="flex items-center gap-3">
               <div
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${actionType === 'Approve'
-                    ? 'bg-emerald-100 text-emerald-600 border border-emerald-200'
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                  actionType === 'Approve'
+                    ? (approvalRole === 'associate' ? 'bg-blue-100 text-blue-600 border border-blue-200' : 'bg-emerald-100 text-emerald-600 border border-emerald-200')
+                    : actionType === 'Delete'
+                    ? 'bg-rose-100 text-rose-600 border border-rose-200'
                     : 'bg-rose-100 text-rose-600 border border-rose-200'
-                  }`}
+                }`}
               >
                 {actionType === 'Approve' ? (
-                  <CheckCircle2 className="w-6 h-6" />
+                  approvalRole === 'associate' ? <ShieldCheck className="w-6 h-6" /> : <UserCheck className="w-6 h-6" />
                 ) : actionType === 'Delete' ? (
                   <Trash2 className="w-6 h-6 text-rose-600" />
                 ) : (
@@ -861,7 +876,11 @@ export function Applications() {
               </div>
               <div>
                 <h3 className="text-lg font-black text-slate-900">
-                  {actionType === 'Delete' ? 'Delete Rejected Application?' : `${actionType} Application?`}
+                  {actionType === 'Approve'
+                    ? 'Approve Application'
+                    : actionType === 'Delete'
+                    ? 'Delete Rejected Application?'
+                    : 'Reject Application?'}
                 </h3>
                 <p className="text-xs text-slate-500 font-mono">
                   {selectedApp.id} • {selectedApp.applicantName}
@@ -869,14 +888,159 @@ export function Applications() {
               </div>
             </div>
 
+            {/* APPLICANT DOSSIER SUMMARY CARD */}
+            <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5 space-y-2 text-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200/80">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Applicant Name</span>
+                <span className="font-extrabold text-slate-900">{selectedApp.applicantName}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Address</span>
+                <span className="font-mono text-slate-700 text-[11px] truncate max-w-[240px]">{selectedApp.email}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mobile Number</span>
+                <span className="font-mono text-slate-700 text-[11px]">{selectedApp.mobile}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">KYC Status</span>
+                <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold ${
+                  (selectedApp.status || '').toLowerCase() === 'approved'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : [selectedApp.photoUrl, selectedApp.idProofUrl, selectedApp.addressProofUrl, selectedApp.signatureUrl, selectedApp.paymentReceiptUrl].filter(Boolean).length >= 3
+                    ? 'bg-blue-100 text-blue-800'
+                    : 'bg-amber-100 text-amber-800'
+                }`}>
+                  {(selectedApp.status || '').toLowerCase() === 'approved'
+                    ? '5/5 Verified'
+                    : `${[selectedApp.photoUrl, selectedApp.idProofUrl, selectedApp.addressProofUrl, selectedApp.signatureUrl, selectedApp.paymentReceiptUrl].filter(Boolean).length}/5 Uploaded`}
+                </span>
+              </div>
+              <div className="flex items-center justify-between pt-1 border-t border-slate-200/80">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Application Status</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                  (selectedApp.status || '').toLowerCase() === 'approved'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : (selectedApp.status || '').toLowerCase() === 'rejected'
+                    ? 'bg-rose-100 text-rose-800'
+                    : 'bg-amber-100 text-amber-800'
+                }`}>
+                  {selectedApp.status || 'Pending'}
+                </span>
+              </div>
+            </div>
+
+            {/* ROLE SELECTION OPTIONS: MEMBER OR ASSOCIATE */}
+            {actionType === 'Approve' && (
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[11px] font-black uppercase tracking-wider text-slate-700">
+                    Choose Approval Type / Account Role <span className="text-rose-500">*</span>
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-medium">Select one</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {/* Option 1: Member */}
+                  <button
+                    type="button"
+                    onClick={() => setApprovalRole('member')}
+                    className={`p-3.5 rounded-2xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      approvalRole === 'member'
+                        ? 'border-emerald-600 bg-emerald-50/70 shadow-xs ring-2 ring-emerald-500/20'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between w-full">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                            approvalRole === 'member'
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          <UserCheck className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="font-black text-xs text-slate-900">Member</div>
+                          <div className="text-[10px] text-emerald-700 font-bold">Regular Full Member</div>
+                        </div>
+                      </div>
+                      <div
+                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
+                          approvalRole === 'member' ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300'
+                        }`}
+                      >
+                        {approvalRole === 'member' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
+                      Statutory membership with shares, deposits, and member loan facilities.
+                    </p>
+                  </button>
+
+                  {/* Option 2: Associate */}
+                  <button
+                    type="button"
+                    onClick={() => setApprovalRole('associate')}
+                    className={`p-3.5 rounded-2xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      approvalRole === 'associate'
+                        ? 'border-blue-600 bg-blue-50/70 shadow-xs ring-2 ring-blue-500/20'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between w-full">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                            approvalRole === 'associate'
+                              ? 'bg-blue-600 text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          <ShieldCheck className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="font-black text-xs text-slate-900">Associate</div>
+                          <div className="text-[10px] text-blue-700 font-bold">Associate Member</div>
+                        </div>
+                      </div>
+                      <div
+                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
+                          approvalRole === 'associate' ? 'border-blue-600 bg-blue-600' : 'border-slate-300'
+                        }`}
+                      >
+                        {approvalRole === 'associate' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
+                      Associate role with access to Associate Dashboard for sourcing customers & earnings.
+                    </p>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {actionType === 'Delete' ? (
               <p className="text-xs text-slate-600 leading-relaxed font-normal">
                 Are you sure you want to permanently delete this rejected application (<strong className="text-slate-900">{selectedApp.id}</strong> - <strong className="text-slate-900">{selectedApp.applicantName}</strong>)? This record and its attachments will be permanently removed from MongoDB.
               </p>
+            ) : actionType === 'Approve' ? (
+              <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                Approving this application will generate an official <strong>NUF-M Member ID</strong>, set their system role to <strong className="text-slate-900">{approvalRole === 'associate' ? 'Associate (Associate Member)' : 'Member (Regular Member)'}</strong>, update approvalStatus to <strong>approved</strong>, and activate dashboard access.
+              </p>
             ) : (
               <p className="text-xs text-slate-600 leading-relaxed font-normal">
-                Are you sure you want to <strong>{actionType.toLowerCase()}</strong> this statutory application? This will update member enrollment status immediately.
+                Are you sure you want to reject this application? This will set approvalStatus to <strong>rejected</strong> and block login access.
               </p>
+            )}
+
+            {/* DUPLICATE APPROVAL PREVENTATIVE WARNING */}
+            {actionType === 'Approve' && (selectedApp.status || '').toLowerCase() === 'approved' && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 font-bold flex items-center gap-2">
+                <span>⚠️ This application is already approved with Member ID {selectedApp.memberId || selectedApp.id}.</span>
+              </div>
             )}
 
             {errorMessage && (
@@ -901,12 +1065,13 @@ export function Applications() {
 
               <button
                 type="button"
-                disabled={isProcessing}
+                disabled={isProcessing || (actionType === 'Approve' && (selectedApp.status || '').toLowerCase() === 'approved')}
                 onClick={handleConfirmAction}
-                className={`px-5 py-2.5 rounded-xl text-white font-black text-xs uppercase tracking-wider shadow-md cursor-pointer disabled:opacity-50 inline-flex items-center gap-2 ${actionType === 'Approve'
-                    ? 'bg-[#00C853] hover:bg-emerald-600'
+                className={`px-5 py-2.5 rounded-xl text-white font-black text-xs uppercase tracking-wider shadow-md cursor-pointer disabled:opacity-50 inline-flex items-center gap-2 ${
+                  actionType === 'Approve'
+                    ? (approvalRole === 'associate' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-emerald-600 hover:bg-emerald-700')
                     : 'bg-rose-600 hover:bg-rose-700'
-                  }`}
+                }`}
               >
                 {isProcessing ? (
                   <>
@@ -914,7 +1079,13 @@ export function Applications() {
                     <span>Processing...</span>
                   </>
                 ) : (
-                  <span>{actionType === 'Delete' ? 'Confirm Delete' : `Confirm ${actionType}`}</span>
+                  <span>
+                    {actionType === 'Delete'
+                      ? 'Confirm Delete'
+                      : actionType === 'Approve'
+                      ? (approvalRole === 'associate' ? 'Approve as Associate' : 'Approve as Member')
+                      : 'Confirm Rejection'}
+                  </span>
                 )}
               </button>
             </div>
@@ -934,13 +1105,17 @@ export function Applications() {
       />
 
       {/* EDIT APPLICATION MODAL */}
-      <EditApplicationModal
-        isOpen={!!editingApp}
-        application={editingApp}
-        districts={createdDistricts}
-        onClose={() => setEditingApp(null)}
-        onSave={handleSaveEdit}
-      />
+      <ErrorBoundary onReset={() => setEditingApp(null)}>
+        {editingApp && (
+          <EditApplicationModal
+            isOpen={!!editingApp}
+            application={editingApp}
+            districts={createdDistricts}
+            onClose={() => setEditingApp(null)}
+            onSave={handleSaveEdit}
+          />
+        )}
+      </ErrorBoundary>
     </div>
   );
 }

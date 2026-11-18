@@ -5,6 +5,7 @@ import { useAdmin } from '../../context/AdminContext';
 import { AdminSidebar } from '../../components/admin/AdminSidebar';
 import { AdminHeader } from '../../components/admin/AdminHeader';
 import { AdminMobileMenu } from '../../components/admin/AdminMobileMenu';
+import { ErrorBoundary } from '../../components/common/ErrorBoundary';
 
 export function AdminDashboardLayout() {
   const { isAuthenticated, refreshData, newApplicationAlert, clearNewApplicationAlert } = useAdmin();
@@ -61,7 +62,9 @@ export function AdminDashboardLayout() {
         {/* SCROLLABLE MAIN PAGE CONTENT WITH RIGHT-SIDE SCROLLBAR */}
         <main ref={mainContentRef} className="flex-1 overflow-y-auto w-full custom-scrollbar">
           <div className="max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8">
-            <Outlet />
+            <ErrorBoundary>
+              <Outlet />
+            </ErrorBoundary>
           </div>
         </main>
       </div>

@@ -14,6 +14,7 @@ export function MemberTable({ members = [], onToggleStatus, onEdit }) {
           const memberId = m.memberId || m.id;
           const appId = m.applicationId || m.app?.id || 'NUF-1001';
           const name = m.applicantName || m.name;
+          const isAssociate = m.role === 'associate' || m.isAssociate === true;
 
           return (
             <div
@@ -25,8 +26,18 @@ export function MemberTable({ members = [], onToggleStatus, onEdit }) {
                   <span className="font-mono font-black text-[#0b1c3d] text-xs block">{memberId}</span>
                   <span className="text-[10px] text-blue-700 font-mono font-bold block mt-0.5">App ID: {appId}</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200/60">
+                <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                  {isAssociate ? (
+                    <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                      Associate
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200/60">
+                      Regular
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                     <MapPin className="w-2.5 h-2.5" />
                     <span>{m.district || m.addressDetails?.district || m.addressDetails?.commDistrict || 'Odisha'}</span>
                   </span>
@@ -110,6 +121,7 @@ export function MemberTable({ members = [], onToggleStatus, onEdit }) {
               <th className="py-3.5 px-4">MEMBER ID</th>
               <th className="py-3.5 px-4">APPLICATION ID</th>
               <th className="py-3.5 px-4">MEMBER NAME</th>
+              <th className="py-3.5 px-4">MEMBERSHIP CLASS</th>
               <th className="py-3.5 px-4">DISTRICT</th>
               <th className="py-3.5 px-4">EMAIL</th>
               <th className="py-3.5 px-4">MOBILE</th>
@@ -124,6 +136,7 @@ export function MemberTable({ members = [], onToggleStatus, onEdit }) {
               const appId = m.applicationId || m.app?.id || 'NUF-1001';
               const name = m.applicantName || m.name;
               const districtName = m.district || m.addressDetails?.district || m.addressDetails?.commDistrict || 'Odisha Circle';
+              const isAssociate = m.role === 'associate' || m.isAssociate === true;
 
               return (
                 <tr
@@ -134,6 +147,18 @@ export function MemberTable({ members = [], onToggleStatus, onEdit }) {
                   <td className="py-3.5 px-4 font-mono font-black text-[#0b1c3d]">{memberId}</td>
                   <td className="py-3.5 px-4 font-mono font-bold text-blue-700">{appId}</td>
                   <td className="py-3.5 px-4 font-bold text-slate-900">{name}</td>
+                  <td className="py-3.5 px-4">
+                    {isAssociate ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        Associate Member
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200">
+                        {m.membershipType || 'Regular Member'}
+                      </span>
+                    )}
+                  </td>
                   <td className="py-3.5 px-4">
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200/60 text-[10px] font-bold">
                       <MapPin className="w-2.5 h-2.5 text-blue-600 shrink-0" />

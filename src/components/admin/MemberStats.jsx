@@ -1,51 +1,50 @@
 import React from 'react';
-import { Users, UserCheck, UserX, UserPlus } from 'lucide-react';
+import { Users, UserCheck, Award, ShieldCheck } from 'lucide-react';
 
 export function MemberStats({ members = [] }) {
   const total = members.length;
+  const associate = members.filter(
+    (m) => m.role === 'associate' || m.isAssociate === true
+  ).length;
+  const regular = Math.max(0, total - associate);
   const active = members.filter((m) => m.membershipStatus === 'Active').length;
-  const inactive = members.filter((m) => m.membershipStatus === 'Inactive').length;
-
-  // New members joined in current month/year
-  const currentYear = new Date().getFullYear().toString();
-  const newMembers = members.filter((m) => m.joiningDate && m.joiningDate.includes(currentYear)).length;
 
   const stats = [
     {
       label: 'TOTAL MEMBERS',
       value: total,
-      subtext: 'Approved statutory members',
+      subtext: 'Approved cooperative members',
       icon: Users,
       iconColor: 'text-blue-600',
       bgColor: 'bg-blue-50/80',
       borderColor: 'border-blue-100',
     },
     {
-      label: 'ACTIVE MEMBERS',
-      value: active,
-      subtext: 'Good standing ledger',
-      icon: UserCheck,
+      label: 'ASSOCIATE MEMBERS',
+      value: associate,
+      subtext: 'Statutory Associate class',
+      icon: Award,
       iconColor: 'text-emerald-600',
       bgColor: 'bg-emerald-50/80',
-      borderColor: 'border-emerald-100',
+      borderColor: 'border-emerald-200',
     },
     {
-      label: 'INACTIVE MEMBERS',
-      value: inactive,
-      subtext: 'Deactivated accounts',
-      icon: UserX,
-      iconColor: 'text-rose-600',
-      bgColor: 'bg-rose-50/80',
-      borderColor: 'border-rose-100',
-    },
-    {
-      label: 'NEW MEMBERS',
-      value: newMembers,
-      subtext: 'Enrolled this period',
-      icon: UserPlus,
+      label: 'REGULAR MEMBERS',
+      value: regular,
+      subtext: 'Ordinary member class',
+      icon: ShieldCheck,
       iconColor: 'text-indigo-600',
       bgColor: 'bg-indigo-50/80',
       borderColor: 'border-indigo-100',
+    },
+    {
+      label: 'ACTIVE STATUS',
+      value: active,
+      subtext: 'Good standing accounts',
+      icon: UserCheck,
+      iconColor: 'text-teal-600',
+      bgColor: 'bg-teal-50/80',
+      borderColor: 'border-teal-100',
     },
   ];
 

@@ -36,7 +36,11 @@ export function Login() {
       !['admin', 'super_admin', 'district_admin'].includes(memberUser?.role) &&
       memberUser?.status === 'active'
     ) {
-      navigate('/member-dashboard', { replace: true });
+      if (memberUser?.role === 'associate') {
+        navigate('/associate-dashboard', { replace: true });
+      } else {
+        navigate('/member-dashboard', { replace: true });
+      }
     }
   }, [isAdmin, isMember, memberUser, navigate]);
 
@@ -126,6 +130,16 @@ export function Login() {
           localStorage.setItem('user', JSON.stringify(res.user));
         }
         navigate('/district-dashboard', { replace: true });
+      } else if (resolvedRole === 'associate') {
+        try {
+          localStorage.removeItem('utkal_finance_admin_auth');
+          localStorage.removeItem('nuf_admin_auth');
+          localStorage.removeItem('adminSession');
+          localStorage.removeItem('utkal_admin_token');
+          localStorage.removeItem('utkal_district_admin_token');
+          localStorage.removeItem('utkal_district_admin_user');
+        } catch {}
+        navigate('/associate-dashboard', { replace: true });
       } else {
         try {
           localStorage.removeItem('utkal_finance_admin_auth');

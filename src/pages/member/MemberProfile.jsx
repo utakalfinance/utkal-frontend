@@ -9,7 +9,7 @@ import { KycVerificationCard } from '../../components/member/profile/KycVerifica
 import { ProfileUpdateNotice } from '../../components/member/profile/ProfileUpdateNotice';
 import { EditMemberProfileModal } from '../../components/member/profile/EditMemberProfileModal';
 import { useMemberAuth } from '../../hooks/useMemberAuth';
-import { Printer, RefreshCw, AlertCircle, ShieldCheck, Pencil, CheckCircle2, Clock } from 'lucide-react';
+import { Printer, RefreshCw, AlertCircle, ShieldCheck, Pencil, CheckCircle2 } from 'lucide-react';
 
 /**
  * MemberProfile Page (/member-dashboard/profile)
@@ -224,43 +224,6 @@ export function MemberProfile() {
         </div>
       )}
 
-      {/* PENDING PROFILE UPDATE REQUEST BANNER */}
-      {pendingUpdateRequest && (
-        <div className="bg-gradient-to-r from-amber-50 via-amber-50/80 to-orange-50/60 border border-amber-300 rounded-2xl p-4 sm:p-5 shadow-2xs animate-fade-in flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5">
-          <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 shadow-xs mt-0.5">
-              <Clock className="w-5 h-5 stroke-[2.5]" />
-            </div>
-            <div className="space-y-0.5">
-              <h4 className="text-xs sm:text-sm font-black text-amber-950 tracking-tight flex items-center gap-2 flex-wrap">
-                <span>Profile Update Request Submitted</span>
-                <span className="px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900 text-[10px] font-black uppercase border border-amber-300">
-                  Pending Admin Approval
-                </span>
-              </h4>
-              <p className="text-xs text-amber-900/90 leading-relaxed">
-                You submitted a profile update request on{' '}
-                <strong>
-                  {new Date(pendingUpdateRequest.createdAt).toLocaleDateString('en-GB', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
-                </strong>
-                . Changes are safely saved and will reflect on your profile once reviewed and approved by branch administration.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => handleOpenEdit('personal')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-amber-950 bg-amber-200/90 hover:bg-amber-300 transition-colors shrink-0 cursor-pointer shadow-2xs"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-            <span>View / Modify Request</span>
-          </button>
-        </div>
-      )}
 
       {/* 2. MEMBER IDENTITY CARD */}
       <MemberIdentityCard

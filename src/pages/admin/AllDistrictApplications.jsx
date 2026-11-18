@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Building2,
   Search,
@@ -27,6 +28,7 @@ import {
 import { AllDistrictLoanDetailModal } from '../../components/admin/loans/AllDistrictLoanDetailModal';
 
 export function AllDistrictApplications() {
+  const navigate = useNavigate();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -579,8 +581,8 @@ export function AllDistrictApplications() {
                       <button
                         type="button"
                         onClick={() => {
-                          setSelectedLoan(loan);
-                          setIsModalOpen(true);
+                          const targetId = loan._id || loan.applicationId || loan.id;
+                          navigate(`/admin-dashboard/loans/${targetId}`);
                         }}
                         className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ml-auto"
                         title="View complete application dossier"

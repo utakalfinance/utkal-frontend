@@ -18,6 +18,11 @@ import {
   Building2,
   ShieldCheck,
   TrendingUp,
+  HelpCircle,
+  Coins,
+  CheckCircle2,
+  Wallet,
+  Receipt,
 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import brandLogo from '../../assets/image copy 7.png';
@@ -95,6 +100,16 @@ export function AdminSidebar() {
       ],
     },
     {
+      title: 'LOAN MANAGEMENT',
+      items: [
+        { label: 'Loan Dashboard', path: '/admin-dashboard/loan-dashboard', icon: Coins },
+        { label: 'Loan Approvals', path: '/admin-dashboard/loans', icon: CheckCircle2 },
+        { label: 'Disbursements', path: '/admin-dashboard/loan-disbursements', icon: Wallet },
+        { label: 'User EMI Collections', path: '/admin-dashboard/emi-collections', icon: Receipt },
+        { label: 'Loan Enquiries', path: '/admin-dashboard/loan-enquiries', icon: HelpCircle },
+      ],
+    },
+    {
       title: 'FINANCIAL SERVICES',
       items: [
         { label: 'Payments', path: '/admin-dashboard/payments', icon: CreditCard },
@@ -110,7 +125,6 @@ export function AdminSidebar() {
     {
       title: 'ADMINISTRATION',
       items: [
-        { label: 'District Management', path: '/admin-dashboard/districts', icon: Building2 },
         { label: 'Admin Profile', path: '/admin-dashboard/profile', icon: User },
       ],
     },

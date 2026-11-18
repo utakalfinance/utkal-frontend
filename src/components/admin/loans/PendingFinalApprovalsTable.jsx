@@ -91,7 +91,7 @@ export function PendingFinalApprovalsTable({
             </span>
           </div>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            Applications verified and forwarded by District Administrators requiring Super Admin sanction.
+            Applications submitted by members awaiting Super Admin final review and sanction decision.
           </p>
         </div>
 
@@ -135,9 +135,9 @@ export function PendingFinalApprovalsTable({
               <th className="py-3 px-3">District</th>
               <th className="py-3 px-3 text-right">Amount & Rate</th>
               <th className="py-3 px-3">Tenure & Purpose</th>
-              <th className="py-3 px-3 text-center">District Verification</th>
-              <th className="py-3 px-3">District Remarks</th>
-              <th className="py-3 px-3 whitespace-nowrap">Submission & Verification</th>
+              <th className="py-3 px-3 text-center">Routing / Status</th>
+              <th className="py-3 px-3">Routing Remarks</th>
+              <th className="py-3 px-3 whitespace-nowrap">Submission Date</th>
               <th className="py-3 px-3 text-center min-w-[200px]">Actions</th>
             </tr>
           </thead>
@@ -210,22 +210,22 @@ export function PendingFinalApprovalsTable({
                     </p>
                   </td>
 
-                  {/* District Verification Status */}
+                  {/* Routing Status */}
                   <td className="py-3 px-3 text-center whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                      {app.districtVerificationStatus || 'Verified'}
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200">
+                      <CheckCircle2 className="w-3 h-3 text-blue-600" />
+                      {app.districtVerificationStatus || 'Direct to Super Admin'}
                     </span>
                   </td>
 
-                  {/* District Admin Remarks */}
+                  {/* Routing Remarks */}
                   <td className="py-3 px-3 max-w-xs text-slate-600">
                     <p className="line-clamp-2 text-[11px] leading-tight" title={app.districtAdminRemarks}>
-                      {app.districtAdminRemarks || 'Verified by District Administration.'}
+                      {app.districtAdminRemarks || 'Direct member application routed to Super Admin for approval.'}
                     </p>
                     {app.districtAdminName && (
                       <span className="text-[9px] text-slate-400 font-semibold block mt-0.5">
-                        By: {app.districtAdminName}
+                        Jurisdiction: {app.district} District
                       </span>
                     )}
                   </td>

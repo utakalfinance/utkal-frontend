@@ -24,13 +24,14 @@ export function ProtectedRoute({ children, allowedRoles = ['admin', 'super_admin
   } catch {}
   const isDistrictAdmin = !!(districtToken && districtUser && districtUser.role === 'district_admin');
 
-  // 3. Check Member session
+  // 3. Check Member / Associate session
   const memberToken = localStorage.getItem('utkal_member_token');
   const memberUserRaw = localStorage.getItem('utkal_member_user');
   let memberUser = null;
   try {
     memberUser = memberUserRaw ? JSON.parse(memberUserRaw) : null;
   } catch {}
+  const isAssociate = !!(memberToken && memberUser && memberUser.role === 'associate');
   const isMember = !!(memberToken && memberUser && (memberUser.role === 'member' || !memberUser.role));
 
   // Determine current active user role
@@ -39,13 +40,15 @@ export function ProtectedRoute({ children, allowedRoles = ['admin', 'super_admin
     currentRole = 'super_admin';
   } else if (isDistrictAdmin) {
     currentRole = 'district_admin';
+  } else if (isAssociate) {
+    currentRole = 'associate';
   } else if (isMember) {
     currentRole = 'member';
   }
 
   // If not authenticated at all, redirect to appropriate login portal
   if (!currentRole) {
-    if (allowedRoles.includes('district_admin') && !allowedRoles.includes('member') && !allowedRoles.includes('super_admin')) {
+    if (allowedRoles.includes('district_admin') && !allowedRoles.includes('member') && !allowedRoles.includes('associate') && !allowedRoles.includes('super_admin')) {
       return <Navigate to="/district-admin/login" state={{ from: location }} replace />;
     }
     return <Navigate to="/login" state={{ from: location }} replace />;
@@ -61,6 +64,9 @@ export function ProtectedRoute({ children, allowedRoles = ['admin', 'super_admin
     // Redirect unauthorized user to their own proper dashboard
     if (currentRole === 'district_admin') {
       return <Navigate to="/district-dashboard" replace />;
+    }
+    if (currentRole === 'associate') {
+      return <Navigate to="/associate-dashboard" replace />;
     }
     if (currentRole === 'member') {
       return <Navigate to="/member-dashboard" replace />;

@@ -57,13 +57,18 @@ export async function getApplicationsApi() {
  * @param {string} id - MongoDB document _id
  * @param {string} status - 'approved', 'rejected', or 'pending'
  */
-export async function updateApplicationStatusApi(id, status = 'approved') {
+export async function updateApplicationStatusApi(id, status = 'approved', role = null) {
+  const payload = { status };
+  if (role) {
+    payload.role = role;
+  }
+
   const response = await fetch(`${apiConfig.baseURL}/applications/${id}/status`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify(payload),
   });
 
   const data = await response.json();

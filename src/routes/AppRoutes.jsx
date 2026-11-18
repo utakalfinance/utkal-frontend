@@ -20,9 +20,11 @@ import { DistrictAdminLogin } from '../pages/DistrictAdminLogin';
 // Admin Imports
 import { AdminDashboardLayout } from '../pages/admin/AdminDashboardLayout';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
+import { isAdminAuthenticated } from '../auth/adminAuth';
 import { AdminDashboard } from '../pages/admin/AdminDashboard';
 import { Applications } from '../pages/admin/Applications';
 import { ApplicationDetails } from '../pages/admin/ApplicationDetails';
+import { EditApplicationPage } from '../pages/admin/EditApplicationPage';
 import { Members } from '../pages/admin/Members';
 import { MemberDetails } from '../pages/admin/MemberDetails';
 import { DepositManagement } from '../pages/admin/DepositManagement';
@@ -35,9 +37,13 @@ import { AdminProfile } from '../pages/admin/AdminProfile';
 import { ProfileUpdateRequests } from '../pages/admin/ProfileUpdateRequests';
 import { LoanApprovals } from '../pages/admin/LoanApprovals';
 import { LoanDisbursement } from '../pages/admin/LoanDisbursement';
+import { EmiCollectionManagement } from '../pages/admin/EmiCollectionManagement';
 import { AllDistrictApplications } from '../pages/admin/AllDistrictApplications';
 import { DistrictUnifiedManagement } from '../pages/admin/DistrictUnifiedManagement';
 import { InvestorManagement } from '../pages/admin/InvestorManagement';
+import { LoanEnquiries } from '../pages/admin/LoanEnquiries';
+import { LoanDashboard } from '../pages/admin/LoanDashboard';
+import { LoanDetailsPage } from '../pages/admin/LoanDetailsPage';
 import { DistrictDashboardLayout } from '../pages/district/DistrictDashboardLayout';
 import { DistrictDashboardHome } from '../pages/district/DistrictDashboardHome';
 import { DistrictAssociateManagement } from '../pages/district/DistrictAssociateManagement';
@@ -70,6 +76,15 @@ import { MyActiveLoans } from '../pages/member/loans/MyActiveLoans';
 import { LoanRepayment } from '../pages/member/loans/LoanRepayment';
 import { LoanHistory } from '../pages/member/loans/LoanHistory';
 
+// Associate Member Imports
+import { AssociateDashboardLayout } from '../pages/associate/AssociateDashboardLayout';
+import { AssociateOverview } from '../pages/associate/AssociateOverview';
+import { AssociateCustomers } from '../pages/associate/AssociateCustomers';
+import { AssociateLoanApplications } from '../pages/associate/AssociateLoanApplications';
+import { AssociateEarnings } from '../pages/associate/AssociateEarnings';
+import { AssociateProfile } from '../pages/associate/AssociateProfile';
+import { AssociateInvestorManagement } from '../pages/associate/AssociateInvestorManagement';
+
 function ScrollToTop() {
   const { pathname } = useLocation();
 
@@ -78,6 +93,32 @@ function ScrollToTop() {
   }, [pathname]);
 
   return null;
+}
+
+function UniversalDashboardRedirect() {
+  const isSuperAdmin = isAdminAuthenticated();
+  const districtToken = localStorage.getItem('utkal_district_admin_token');
+  const districtUserRaw = localStorage.getItem('utkal_district_admin_user');
+  let districtUser = null;
+  try {
+    districtUser = districtUserRaw ? JSON.parse(districtUserRaw) : null;
+  } catch {}
+  const isDistrictAdmin = !!(districtToken && districtUser && districtUser.role === 'district_admin');
+
+  const memberToken = localStorage.getItem('utkal_member_token');
+  const memberUserRaw = localStorage.getItem('utkal_member_user');
+  let memberUser = null;
+  try {
+    memberUser = memberUserRaw ? JSON.parse(memberUserRaw) : null;
+  } catch {}
+  const isAssociate = !!(memberToken && memberUser && memberUser.role === 'associate');
+  const isMember = !!(memberToken && memberUser && (memberUser.role === 'member' || !memberUser.role));
+
+  if (isSuperAdmin) return <Navigate to="/admin-dashboard" replace />;
+  if (isDistrictAdmin) return <Navigate to="/district-dashboard" replace />;
+  if (isAssociate) return <Navigate to="/associate-dashboard" replace />;
+  if (isMember) return <Navigate to="/member-dashboard" replace />;
+  return <Navigate to="/login" replace />;
 }
 
 export function AppRoutes() {
@@ -118,9 +159,19 @@ export function AppRoutes() {
         <Route path="register" element={<Register />} />
         <Route path="membership-form" element={<Register />} />
 
+        {/* Universal Role-Aware Dashboard Redirection Route */}
+        <Route path="dashboard" element={<UniversalDashboardRedirect />} />
+
         {/* Member Portal Routes */}
-        <Route path="member" element={<Navigate to="/member-dashboard" replace />} />
-        <Route path="member-dashboard" element={<MemberDashboardLayout />}>
+        <Route path="member" element={<UniversalDashboardRedirect />} />
+        <Route
+          path="member-dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['member']}>
+              <MemberDashboardLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<MemberDashboard />} />
           <Route path="profile" element={<MemberProfile />} />
           <Route path="membership" element={<MemberMembership />} />
@@ -134,13 +185,34 @@ export function AppRoutes() {
           <Route path="loans/track" element={<TrackApplication />} />
           <Route path="loans/emi-schedule" element={<EmiSchedule />} />
           <Route path="loans/next-eligibility" element={<NextLoanEligibility />} />
-          <Route path="loans/applications" element={<TrackApplication />} />
+          <Route path="loans/applications" element={<MyLoanApplications />} />
           <Route path="loans/active" element={<MyActiveLoans />} />
-          <Route path="loans/repayment" element={<EmiSchedule />} />
+          <Route path="loans/repayment" element={<LoanRepayment />} />
           <Route path="loans/history" element={<LoanHistory />} />
           <Route path="documents" element={<MemberDocuments />} />
           <Route path="kyc-documents" element={<MemberDocuments />} />
           <Route path="notifications" element={<MemberNotifications />} />
+        </Route>
+
+        {/* Dedicated Associate Member Portal Routes */}
+        <Route path="associate" element={<Navigate to="/associate-dashboard" replace />} />
+        <Route path="associate/investors" element={<Navigate to="/associate-dashboard/investors" replace />} />
+        <Route
+          path="associate-dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['associate']}>
+              <AssociateDashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<AssociateOverview />} />
+          <Route path="customers" element={<Navigate to="/associate-dashboard" replace />} />
+          <Route path="loans" element={<Navigate to="/associate-dashboard" replace />} />
+          <Route path="investors" element={<AssociateInvestorManagement />} />
+          <Route path="earnings" element={<Navigate to="/associate-dashboard" replace />} />
+          <Route path="payouts" element={<Navigate to="/associate-dashboard" replace />} />
+          <Route path="earnings-payouts" element={<Navigate to="/associate-dashboard" replace />} />
+          <Route path="profile" element={<AssociateProfile />} />
         </Route>
 
         {/* Admin Portal Routes */}
@@ -148,15 +220,22 @@ export function AppRoutes() {
         <Route path="admin/deposits" element={<Navigate to="/admin-dashboard/deposits" replace />} />
         <Route path="admin/transactions" element={<Navigate to="/admin-dashboard/transactions" replace />} />
         <Route path="admin/notices" element={<Navigate to="/admin-dashboard/notices" replace />} />
-        <Route path="admin/loan-enquiries" element={<Navigate to="/admin-dashboard/loans" replace />} />
+        <Route path="admin/loan-enquiries" element={<Navigate to="/admin-dashboard/loan-enquiries" replace />} />
+        <Route path="admin/loan-dashboard" element={<Navigate to="/admin-dashboard/loan-dashboard" replace />} />
+        <Route path="admin/loan-overview" element={<Navigate to="/admin-dashboard/loan-dashboard" replace />} />
+        <Route path="admin/loan-policy" element={<Navigate to="/admin-dashboard/loan-dashboard" replace />} />
+        <Route path="admin/loan-settings" element={<Navigate to="/admin-dashboard/loan-dashboard" replace />} />
         <Route path="admin/investors" element={<Navigate to="/admin-dashboard/investors" replace />} />
         <Route path="admin/investor" element={<Navigate to="/admin-dashboard/investors" replace />} />
         <Route path="admin/investors/ledger" element={<Navigate to="/admin-dashboard/investors" replace />} />
         <Route path="admin/investors/tracking2x" element={<Navigate to="/admin-dashboard/investors" replace />} />
         <Route path="admin/investors/reports" element={<Navigate to="/admin-dashboard/investors" replace />} />
         <Route path="admin/investors/*" element={<Navigate to="/admin-dashboard/investors" replace />} />
-        <Route path="admin/districts" element={<Navigate to="/admin-dashboard/districts" replace />} />
-        <Route path="admin/district-admins" element={<Navigate to="/admin-dashboard/district-admins" replace />} />
+        <Route path="admin/districts" element={<Navigate to="/admin-dashboard" replace />} />
+        <Route path="admin/district-admins" element={<Navigate to="/admin-dashboard" replace />} />
+        <Route path="admin_dashboard" element={<Navigate to="/admin-dashboard" replace />} />
+        <Route path="admin_dashboard/applications" element={<Navigate to="/admin-dashboard/applications" replace />} />
+        <Route path="admin_dashboard/*" element={<Navigate to="/admin-dashboard" replace />} />
 
         {/* District Partner Dedicated Portal */}
         <Route
@@ -194,19 +273,32 @@ export function AppRoutes() {
           <Route index element={<AdminDashboard />} />
           <Route path="applications" element={<Applications />} />
           <Route path="applications/:id" element={<ApplicationDetails />} />
+          <Route path="applications/:id/edit" element={<EditApplicationPage />} />
+          <Route path="applications/edit/:id" element={<EditApplicationPage />} />
           <Route path="members" element={<Members />} />
           <Route path="members/:memberId" element={<MemberDetails />} />
           <Route path="profile-updates" element={<ProfileUpdateRequests />} />
-          <Route path="loan-enquiries" element={<Navigate to="/admin-dashboard/loans" replace />} />
+          <Route path="loan-dashboard" element={<LoanDashboard />} />
+          <Route path="loan-policy" element={<Navigate to="/admin-dashboard/loan-dashboard" replace />} />
+          <Route path="loan-settings" element={<Navigate to="/admin-dashboard/loan-dashboard" replace />} />
+          <Route path="loan-overview" element={<Navigate to="/admin-dashboard/loan-dashboard" replace />} />
+          <Route path="loans-overview" element={<Navigate to="/admin-dashboard/loan-dashboard" replace />} />
+          <Route path="loan-enquiries" element={<LoanEnquiries />} />
           <Route path="loans" element={<LoanApprovals />} />
+          <Route path="loans/:id" element={<LoanDetailsPage />} />
+          <Route path="loan-details/:id" element={<LoanDetailsPage />} />
+          <Route path="loan-applications/:id" element={<LoanDetailsPage />} />
           <Route path="all-district-applications" element={<AllDistrictApplications />} />
           <Route path="district-applications" element={<AllDistrictApplications />} />
           <Route path="loan-disbursements" element={<LoanDisbursement />} />
           <Route path="loan-disbursement" element={<LoanDisbursement />} />
-          <Route path="emi-collections" element={<Navigate to="/admin-dashboard/loans" replace />} />
-          <Route path="emi-collection" element={<Navigate to="/admin-dashboard/loans" replace />} />
-          <Route path="districts" element={<DistrictUnifiedManagement />} />
-          <Route path="district-admins" element={<DistrictUnifiedManagement />} />
+          <Route path="emi-collections" element={<EmiCollectionManagement />} />
+          <Route path="emi-collection" element={<EmiCollectionManagement />} />
+          <Route path="user-emi" element={<EmiCollectionManagement />} />
+          <Route path="user-emis" element={<EmiCollectionManagement />} />
+          <Route path="emis" element={<EmiCollectionManagement />} />
+          <Route path="districts" element={<Navigate to="/admin-dashboard" replace />} />
+          <Route path="district-admins" element={<Navigate to="/admin-dashboard" replace />} />
           <Route path="deposits" element={<DepositManagement />} />
           <Route path="payments" element={<Payments />} />
           <Route path="investors" element={<InvestorManagement />} />

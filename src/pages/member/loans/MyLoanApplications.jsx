@@ -153,7 +153,7 @@ export function MyLoanApplications() {
       {/* PAGE HEADER */}
       <MemberPageHeader
         title="My Loan Applications"
-        description="Monitor statutory member loan applications through the two-tier verification hierarchy: District Administration review followed by Super Admin sanction."
+        description="Track your member loan applications through direct Super Admin review, sanction, and disbursement."
         badge="APPLICATION TRACKER"
         breadcrumbs={[
           { label: 'Loan Services', path: '/member-dashboard/loans/overview' },
@@ -190,10 +190,9 @@ export function MyLoanApplications() {
             className="text-xs font-bold px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
           >
             <option value="ALL">All Application Statuses</option>
-            <option value="Pending District Verification">Pending District Verification</option>
-            <option value="Under Verification">Under Verification</option>
-            <option value="Forwarded to Super Admin">Forwarded to Super Admin</option>
+            <option value="Pending Final Approval">Pending Super Admin Approval</option>
             <option value="Approved">Approved</option>
+            <option value="Approved – Not Disbursed">Approved (Pending Disbursement)</option>
             <option value="Disbursed">Disbursed</option>
             <option value="On Hold">On Hold</option>
             <option value="Rejected">Rejected</option>
@@ -245,8 +244,8 @@ export function MyLoanApplications() {
                   <th className="py-3 px-4">Loan Type</th>
                   <th className="py-3 px-4">Requested</th>
                   <th className="py-3 px-4">Date</th>
-                  <th className="py-3 px-4">District Verification</th>
-                  <th className="py-3 px-4">Final Approval</th>
+                  <th className="py-3 px-4">Routing / Branch</th>
+                  <th className="py-3 px-4">Super Admin Sanction</th>
                   <th className="py-3 px-4">Current Status</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
@@ -278,25 +277,21 @@ export function MyLoanApplications() {
                     {/* Date */}
                     <td className="py-3.5 px-4 text-slate-500">{formatDate(app.createdAt)}</td>
 
-                    {/* District Verification Status */}
+                    {/* Routing / Branch */}
                     <td className="py-3.5 px-4">
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${getDistrictBadge(
-                          app.districtVerification?.status
-                        )}`}
-                      >
-                        {app.districtVerification?.status || 'Pending'}
+                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold border text-blue-700 bg-blue-50 border-blue-200">
+                        {app.districtVerification?.status === 'Verified' ? 'Verified' : 'Direct to HQ'}
                       </span>
                     </td>
 
-                    {/* Final Approval Status */}
+                    {/* Super Admin Sanction */}
                     <td className="py-3.5 px-4">
                       <span
                         className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${getFinalBadge(
-                          app.finalApproval?.status
+                          app.finalApproval?.status || (app.status === 'Approved' ? 'Approved' : 'Pending')
                         )}`}
                       >
-                        {app.finalApproval?.status || 'Pending'}
+                        {app.finalApproval?.status || (app.status === 'Approved' ? 'Approved' : 'Pending')}
                       </span>
                     </td>
 
@@ -365,9 +360,9 @@ export function MyLoanApplications() {
               {/* Stepper Progress */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-3">
-                  Two-Tier Verification Lifecycle
+                  Super Admin Approval &amp; Sanction Lifecycle
                 </span>
-                <div className="grid grid-cols-4 gap-2 text-center text-[10px]">
+                <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
                   {/* Step 1: Submitted */}
                   <div className="space-y-1">
                     <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold mx-auto">
@@ -379,58 +374,48 @@ export function MyLoanApplications() {
                     </span>
                   </div>
 
-                  {/* Step 2: District Review */}
+                  {/* Step 2: Super Admin Sanction */}
                   <div className="space-y-1">
                     <div
                       className={`w-6 h-6 rounded-full flex items-center justify-center font-bold mx-auto ${
-                        selectedApp.districtVerification?.status === 'Verified'
+                        selectedApp.finalApproval?.status === 'Approved' || selectedApp.status === 'Approved'
                           ? 'bg-emerald-600 text-white'
-                          : selectedApp.districtVerification?.status === 'Rejected'
+                          : selectedApp.finalApproval?.status === 'Rejected' || selectedApp.status === 'Rejected'
                           ? 'bg-rose-600 text-white'
-                          : 'bg-amber-500 text-white'
+                          : selectedApp.finalApproval?.status === 'On Hold' || selectedApp.status === 'On Hold'
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-blue-600 text-white animate-pulse'
                       }`}
                     >
-                      {selectedApp.districtVerification?.status === 'Verified' ? '✓' : '2'}
+                      {selectedApp.finalApproval?.status === 'Approved' || selectedApp.status === 'Approved'
+                        ? '✓'
+                        : selectedApp.finalApproval?.status === 'Rejected' || selectedApp.status === 'Rejected'
+                        ? '✕'
+                        : '2'}
                     </div>
-                    <span className="font-bold text-slate-700 block">District Admin</span>
+                    <span className="font-bold text-slate-700 block">Super Admin Sanction</span>
                     <span className="text-slate-400 text-[9px]">
-                      {selectedApp.districtVerification?.status || 'Pending'}
+                      {selectedApp.finalApproval?.status ||
+                        (selectedApp.status === 'Approved' ? 'Approved' : 'Under Review')}
                     </span>
                   </div>
 
-                  {/* Step 3: Super Admin */}
+                  {/* Step 3: Disbursed */}
                   <div className="space-y-1">
                     <div
                       className={`w-6 h-6 rounded-full flex items-center justify-center font-bold mx-auto ${
-                        selectedApp.finalApproval?.status === 'Approved'
-                          ? 'bg-emerald-600 text-white'
-                          : selectedApp.finalApproval?.status === 'Rejected'
-                          ? 'bg-rose-600 text-white'
-                          : 'bg-slate-200 text-slate-500'
-                      }`}
-                    >
-                      {selectedApp.finalApproval?.status === 'Approved' ? '✓' : '3'}
-                    </div>
-                    <span className="font-bold text-slate-700 block">Super Admin</span>
-                    <span className="text-slate-400 text-[9px]">
-                      {selectedApp.finalApproval?.status || 'Pending'}
-                    </span>
-                  </div>
-
-                  {/* Step 4: Disbursed */}
-                  <div className="space-y-1">
-                    <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center font-bold mx-auto ${
-                        selectedApp.disbursement?.isDisbursed
+                        selectedApp.disbursement?.isDisbursed || selectedApp.status === 'Active'
                           ? 'bg-teal-600 text-white'
                           : 'bg-slate-200 text-slate-500'
                       }`}
                     >
-                      {selectedApp.disbursement?.isDisbursed ? '✓' : '4'}
+                      {selectedApp.disbursement?.isDisbursed || selectedApp.status === 'Active' ? '✓' : '3'}
                     </div>
-                    <span className="font-bold text-slate-700 block">Disbursed</span>
+                    <span className="font-bold text-slate-700 block">Capital Disbursed</span>
                     <span className="text-slate-400 text-[9px]">
-                      {selectedApp.disbursement?.isDisbursed ? 'Active' : 'Awaiting'}
+                      {selectedApp.disbursement?.isDisbursed || selectedApp.status === 'Active'
+                        ? 'Completed'
+                        : 'Awaiting'}
                     </span>
                   </div>
                 </div>

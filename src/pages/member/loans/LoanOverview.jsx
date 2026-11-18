@@ -223,7 +223,7 @@ export function LoanOverview() {
             </h2>
 
             <p className="text-xs text-blue-200/90 leading-relaxed font-mono">
-              Member ID: <strong className="text-white">{memberId}</strong> • Statutory First Loan Ceiling: ₹10,000
+              Member ID: <strong className="text-white">{memberId}</strong> • Statutory Loan Ceiling: ₹{Number(overview.firstLoanAmount || 10000).toLocaleString('en-IN')}
             </p>
           </div>
 
@@ -323,13 +323,13 @@ export function LoanOverview() {
             </div>
 
             <p className="text-xs text-slate-500 leading-relaxed">
-              In accordance with client bylaws, newly admitted members must start with this fixed ₹10,000 credit limit. Custom amounts are not permitted.
+              Approved introductory member credit facility configured under active administrative policy.
             </p>
           </div>
 
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Interest Tier: 11% / 12% CIBIL</span>
-            <span className="font-bold text-blue-700">Option 1 Reducing</span>
+            <span>Interest Rate: {overview.loanSetting?.interestRateDisplay || `${overview.loanSetting?.monthlyInterestRate || 1}% / Month`}</span>
+            <span className="font-bold text-blue-700 capitalize">{(overview.loanSetting?.emiCalculationMethod || 'reducing_balance').replace('_', ' ')}</span>
           </div>
         </div>
 
@@ -537,7 +537,7 @@ export function LoanOverview() {
                 Apply for Loan
               </h4>
               <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                Apply for the ₹10,000 First Member Loan with 3, 6, or 9 months tenure.
+                Apply for statutory member loan facility with dynamic tenure options.
               </p>
             </div>
           </button>
@@ -557,7 +557,7 @@ export function LoanOverview() {
                 Track Application Status
               </h4>
               <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                Monitor District verification and Super Admin final sanction progress.
+                Monitor Super Admin review, sanction, and disbursement progress.
               </p>
             </div>
           </button>

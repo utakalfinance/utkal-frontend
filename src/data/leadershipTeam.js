@@ -5,6 +5,9 @@ import antarjamiPhoto from '../assets/image copy 25.png';
 import govindaPhoto from '../assets/image copy 19.png';
 import ajitBhueiaPhoto from '../assets/WhatsApp Image 2026-09-19 at 13.55.28.jpeg';
 import mornalPhoto from '../assets/image copy 26.png';
+import krushnaPhoto from '../assets/krushna_chandra_sahoo.jpg';
+import jalandharPhoto from '../assets/jalandhar_pradhan.jpg';
+import surajPhoto from '../assets/suraj_kumar_sahoo.jpg';
 
 export const LEADERSHIP_TEAM = [
   {
@@ -41,6 +44,21 @@ export const LEADERSHIP_TEAM = [
     id: 7,
     image: mornalPhoto,
     name: "Mornal Kumar Mohapatra",
+  },
+  {
+    id: 8,
+    image: krushnaPhoto,
+    name: "Krushna Chandra Sahoo",
+  },
+  {
+    id: 9,
+    image: jalandharPhoto,
+    name: "Jalandhar Pradhan",
+  },
+  {
+    id: 10,
+    image: surajPhoto,
+    name: "Suraj Kumar Sahoo",
   },
 ];
 

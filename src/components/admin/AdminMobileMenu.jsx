@@ -17,6 +17,11 @@ import {
   FileSpreadsheet,
   Building2,
   TrendingUp,
+  HelpCircle,
+  Coins,
+  CheckCircle2,
+  Wallet,
+  Receipt,
 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import brandLogo from '../../assets/image copy 7.png';
@@ -51,6 +56,11 @@ export function AdminMobileMenu({ isOpen, onClose }) {
     { label: 'Documents & Audit', path: '/admin-dashboard/documents', icon: FolderCheck },
     { label: 'Payments', path: '/admin-dashboard/payments', icon: CreditCard },
     { label: 'Investor Management', path: '/admin-dashboard/investors', icon: TrendingUp },
+    { label: 'Loan Dashboard', path: '/admin-dashboard/loan-dashboard', icon: Coins },
+    { label: 'Loan Approvals', path: '/admin-dashboard/loans', icon: CheckCircle2 },
+    { label: 'Disbursements', path: '/admin-dashboard/loan-disbursements', icon: Wallet },
+    { label: 'User EMI Collections', path: '/admin-dashboard/emi-collections', icon: Receipt },
+    { label: 'Loan Enquiries', path: '/admin-dashboard/loan-enquiries', icon: HelpCircle },
     {
       label: 'Notices & Circulars',
       path: '/admin-dashboard/notices',
@@ -58,7 +68,6 @@ export function AdminMobileMenu({ isOpen, onClose }) {
       badge: unreadNoticesCount > 0 ? unreadNoticesCount : null,
       badgeColor: 'bg-blue-500 text-white font-black'
     },
-    { label: 'District Management', path: '/admin-dashboard/districts', icon: Building2 },
     { label: 'Admin Profile & Settings', path: '/admin-dashboard/profile', icon: User },
   ];
 

@@ -50,6 +50,27 @@ export async function fetchAvailableLoanProductsApi(token) {
 }
 
 /**
+ * Fetch dynamic loan parameters and EMI policy settings for members
+ * GET /api/loan-applications/settings
+ */
+export async function fetchCustomerLoanSettingsApi(token) {
+  const authToken = getMemberToken(token);
+  const response = await fetch(`${apiConfig.baseURL}/loan-applications/settings`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${authToken}`,
+    },
+  });
+
+  const data = await response.json();
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || 'Failed to fetch loan settings');
+  }
+  return data.settings;
+}
+
+/**
  * Submit loan application with uploaded documents
  * POST /api/loan-applications/apply
  */

@@ -16,6 +16,9 @@ import {
   LogOut,
   X,
   ShieldCheck,
+  Coins,
+  Wallet,
+  CreditCard,
 } from 'lucide-react';
 import brandLogo from '../../assets/image copy 7.png';
 
@@ -56,9 +59,12 @@ export function MemberMobileMenu({
       title: 'LOAN SERVICES',
       items: [
         { label: 'Loan Overview', path: '/member-dashboard/loans/overview', icon: PieChart },
+        { label: 'Available Loans', path: '/member-dashboard/loans/available', icon: Coins },
         { label: 'Apply for Loan', path: '/member-dashboard/loans/apply', icon: FilePlus2 },
-        { label: 'Track Application Status', path: '/member-dashboard/loans/track', icon: ClipboardList },
+        { label: 'Track Application', path: '/member-dashboard/loans/track', icon: ClipboardList },
+        { label: 'My Active Loans', path: '/member-dashboard/loans/active', icon: Wallet },
         { label: 'EMI Schedule', path: '/member-dashboard/loans/emi-schedule', icon: Calendar },
+        { label: 'Loan Repayment', path: '/member-dashboard/loans/repayment', icon: CreditCard },
         { label: 'Loan Payment History', path: '/member-dashboard/loans/history', icon: History },
         { label: 'Next Loan Eligibility', path: '/member-dashboard/loans/next-eligibility', icon: Sparkles },
       ],
