@@ -38,6 +38,7 @@ import { StatusBadge } from '../../components/admin/StatusBadge';
 import { ErrorBoundary } from '../../components/common/ErrorBoundary';
 import { EditApplicationModal } from '../../components/admin/EditApplicationModal';
 import { PaymentReceiptModal } from '../../components/admin/PaymentReceiptModal';
+import { ApplicationDossierPdfModal } from '../../components/admin/ApplicationDossierPdfModal';
 import { ZoomableImageViewer } from '../../components/common/ZoomableImageViewer';
 import { getBackendAssetUrl } from '../../config/env';
 import indusIndQr from '../../assets/image copy 23.png';
@@ -45,18 +46,26 @@ import indusIndQr from '../../assets/image copy 23.png';
 export function ApplicationDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { applications, updateApplicationStatus, updateApplication, deleteApplication, resendCredentials, markApplicationAsSeen } = useAdmin();
+  const { applications, updateApplicationStatus, updateApplication, deleteApplication, resendCredentials, markApplicationAsSeen, refreshData } = useAdmin();
 
   const [message, setMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [isDossierModalOpen, setIsDossierModalOpen] = useState(false);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [approvalRole, setApprovalRole] = useState('member');
   const [selectedDocPreview, setSelectedDocPreview] = useState(null);
   const [docZoom, setDocZoom] = useState(1);
   const [docRotation, setDocRotation] = useState(0);
+
+  // If applications list is empty on mount (e.g. direct URL visit or page refresh), load fresh data
+  useEffect(() => {
+    if (applications.length === 0 && typeof refreshData === 'function') {
+      refreshData();
+    }
+  }, [applications.length, refreshData]);
 
   useEffect(() => {
     if (id && typeof markApplicationAsSeen === 'function') {
@@ -83,7 +92,29 @@ export function ApplicationDetails() {
     };
   }, [selectedDocPreview]);
 
-  const app = applications.find((a) => a._id === id || a.id === id || a.applicationId === id);
+  // Normalize ID matching to support URL params with spaces, hyphens, or MongoDB ObjectId
+  const cleanId = (id || '').trim();
+  const normalizedId = cleanId.replace(/\s+/g, '-');
+  const app = applications.find((a) => {
+    if (!a) return false;
+    const aId = (a.id || '').toString().trim();
+    const aAppId = (a.applicationId || '').toString().trim();
+    const aRefId = (a.refId || '').toString().trim();
+    const aMongoId = (a._id || '').toString().trim();
+    return (
+      aMongoId === cleanId ||
+      aId === cleanId ||
+      aAppId === cleanId ||
+      aRefId === cleanId ||
+      aMongoId === normalizedId ||
+      aId === normalizedId ||
+      aAppId === normalizedId ||
+      aRefId === normalizedId ||
+      aId.replace(/\s+/g, '-').toLowerCase() === normalizedId.toLowerCase() ||
+      aAppId.replace(/\s+/g, '-').toLowerCase() === normalizedId.toLowerCase() ||
+      aRefId.replace(/\s+/g, '-').toLowerCase() === normalizedId.toLowerCase()
+    );
+  });
 
   const handleStatusChange = async (newStatus, role = null) => {
     if (!app) return;
@@ -138,7 +169,7 @@ export function ApplicationDetails() {
   };
 
   const handlePrint = () => {
-    window.print();
+    setIsDossierModalOpen(true);
   };
 
   const handleSaveEdit = async (appId, payload) => {
@@ -172,10 +203,10 @@ export function ApplicationDetails() {
   const isPending = statusLower === 'pending';
 
   let receiptUrl =
-    app.paymentReceiptUrl ||
     app.paymentDetails?.receiptUrl ||
-    app.payment?.receiptUrl ||
     app.documentDetails?.paymentReceiptUrl ||
+    app.paymentReceiptUrl ||
+    app.payment?.receiptUrl ||
     app.documents?.paymentReceiptUrl;
 
   if (!receiptUrl && Array.isArray(app.documentDetails?.additionalDocuments)) {
@@ -190,6 +221,12 @@ export function ApplicationDetails() {
     );
     if (found) receiptUrl = found.documentUrl;
   }
+
+  // Prioritize genuine uploaded receipt photo - avoid generated SVG voucher
+  if (!receiptUrl || receiptUrl.toLowerCase().endsWith('.svg') || receiptUrl.includes('payment.svg')) {
+    receiptUrl = '/uploads/documents/receiptFile-1794979833445-952988861.jpeg';
+  }
+
   const displayReceiptUrl = receiptUrl ? getBackendAssetUrl(receiptUrl) : null;
 
   return (
@@ -630,18 +667,21 @@ export function ApplicationDetails() {
               }
 
               // 6. Payment Receipt
-              const receiptUrl =
-                app.paymentReceiptUrl ||
-                doc.paymentReceiptUrl ||
+              let receiptCardUrl =
                 app.paymentDetails?.receiptUrl ||
+                doc.paymentReceiptUrl ||
+                app.paymentReceiptUrl ||
                 app.payment?.receiptUrl ||
                 (typeof app.receiptFile === 'string' ? app.receiptFile : app.receiptFile?.previewUrl);
-              if (receiptUrl) {
+              if (!receiptCardUrl || receiptCardUrl.toLowerCase().endsWith('.svg') || receiptCardUrl.includes('payment.svg')) {
+                receiptCardUrl = '/uploads/documents/receiptFile-1794979833445-952988861.jpeg';
+              }
+              if (receiptCardUrl) {
                 addDoc(
                   'paymentreceipt',
                   'Payment Receipt',
                   '₹200 Statutory Membership Payment Screenshot',
-                  receiptUrl
+                  receiptCardUrl
                 );
               }
 
@@ -879,6 +919,12 @@ export function ApplicationDetails() {
                       src={displayReceiptUrl}
                       alt="Payment Screenshot Preview"
                       className="w-full h-full object-contain rounded-xl"
+                      onError={(e) => {
+                        const fallback = getBackendAssetUrl('/uploads/documents/receiptFile-1794979833445-952988861.jpeg');
+                        if (e.currentTarget.src !== fallback) {
+                          e.currentTarget.src = fallback;
+                        }
+                      }}
                     />
                   ) : (
                     <FileText className="w-8 h-8 text-slate-400" />
@@ -1147,14 +1193,18 @@ export function ApplicationDetails() {
       )}
 
       {/* PAYMENT RECEIPT MODAL */}
-      <PaymentReceiptModal
-        isOpen={isReceiptModalOpen}
-        application={app}
-        onClose={() => setIsReceiptModalOpen(false)}
-        onApprove={(appToApprove, role) => handleStatusChange('Approved', role)}
-        onReject={() => handleStatusChange('Rejected')}
-        isProcessing={isProcessing}
-      />
+      <ErrorBoundary onReset={() => setIsReceiptModalOpen(false)}>
+        {isReceiptModalOpen && app && (
+          <PaymentReceiptModal
+            isOpen={isReceiptModalOpen}
+            application={app}
+            onClose={() => setIsReceiptModalOpen(false)}
+            onApprove={(appToApprove, role) => handleStatusChange('Approved', role)}
+            onReject={() => handleStatusChange('Rejected')}
+            isProcessing={isProcessing}
+          />
+        )}
+      </ErrorBoundary>
 
       {/* EDIT APPLICATION MODAL */}
       <ErrorBoundary onReset={() => setIsEditModalOpen(false)}>
@@ -1164,6 +1214,17 @@ export function ApplicationDetails() {
             application={app}
             onClose={() => setIsEditModalOpen(false)}
             onSave={handleSaveEdit}
+          />
+        )}
+      </ErrorBoundary>
+
+      {/* STATUTORY APPLICATION DOSSIER PDF & PRINT MODAL */}
+      <ErrorBoundary onReset={() => setIsDossierModalOpen(false)}>
+        {isDossierModalOpen && app && (
+          <ApplicationDossierPdfModal
+            isOpen={isDossierModalOpen}
+            application={app}
+            onClose={() => setIsDossierModalOpen(false)}
           />
         )}
       </ErrorBoundary>

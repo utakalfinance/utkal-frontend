@@ -89,15 +89,30 @@
 }
 
 
-/* Printable Statutory Form Styles */
+/* Printable Statutory Form & Dossier Styles */
 @media print {
   body {
     background: #ffffff !important;
     color: #000000 !important;
   }
 
-  header, footer, nav, .no-print {
+  header, footer, nav, aside, .no-print, .no-print-backdrop {
     display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+  }
+
+  #printable-dossier {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
   }
 
   .print-page-break {
@@ -106,8 +121,8 @@
   }
 
   @page {
-    size: A4;
-    margin: 10mm 12mm;
+    size: A4 portrait;
+    margin: 8mm 10mm;
   }
 }
 

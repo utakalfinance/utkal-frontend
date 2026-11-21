@@ -7,7 +7,7 @@ import ajitBhueiaPhoto from '../assets/WhatsApp Image 2026-09-19 at 13.55.28.jpe
 import mornalPhoto from '../assets/image copy 26.png';
 import krushnaPhoto from '../assets/krushna_chandra_sahoo.jpg';
 import jalandharPhoto from '../assets/jalandhar_pradhan.jpg';
-import surajPhoto from '../assets/suraj_kumar_sahoo.jpg';
+import surathPhoto from '../assets/surath_sahoo.jpg';
 
 export const LEADERSHIP_TEAM = [
   {
@@ -57,8 +57,8 @@ export const LEADERSHIP_TEAM = [
   },
   {
     id: 10,
-    image: surajPhoto,
-    name: "Suraj Kumar Sahoo",
+    image: surathPhoto,
+    name: "Surath Sahoo",
   },
 ];
 

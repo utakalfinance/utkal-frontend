@@ -121,6 +121,12 @@ function UniversalDashboardRedirect() {
   return <Navigate to="/login" replace />;
 }
 
+function AdminDashboardRedirect() {
+  const location = useLocation();
+  const targetPath = location.pathname.replace(/^\/admin_dashboard/i, '/admin-dashboard') + location.search + location.hash;
+  return <Navigate to={targetPath} replace />;
+}
+
 export function AppRoutes() {
   return (
     <>
@@ -233,9 +239,8 @@ export function AppRoutes() {
         <Route path="admin/investors/*" element={<Navigate to="/admin-dashboard/investors" replace />} />
         <Route path="admin/districts" element={<Navigate to="/admin-dashboard" replace />} />
         <Route path="admin/district-admins" element={<Navigate to="/admin-dashboard" replace />} />
+        <Route path="admin_dashboard/*" element={<AdminDashboardRedirect />} />
         <Route path="admin_dashboard" element={<Navigate to="/admin-dashboard" replace />} />
-        <Route path="admin_dashboard/applications" element={<Navigate to="/admin-dashboard/applications" replace />} />
-        <Route path="admin_dashboard/*" element={<Navigate to="/admin-dashboard" replace />} />
 
         {/* District Partner Dedicated Portal */}
         <Route

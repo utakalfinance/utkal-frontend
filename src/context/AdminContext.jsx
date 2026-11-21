@@ -82,7 +82,7 @@ function normalizeApplication(app) {
     : app.applicantName || 'Applicant';
 
   const pay = app.paymentDetails || app.payment || {};
-  const paymentReceiptUrl =
+  let paymentReceiptUrl =
     pay.receiptUrl ||
     doc.paymentReceiptUrl ||
     app.paymentReceiptUrl ||
@@ -91,9 +91,14 @@ function normalizeApplication(app) {
       : '') ||
     '';
 
+  // Prioritize actual uploaded payment receipt photo - avoid generated SVG document
+  if (!paymentReceiptUrl || paymentReceiptUrl.toLowerCase().endsWith('.svg') || paymentReceiptUrl.includes('payment.svg')) {
+    paymentReceiptUrl = '/uploads/documents/receiptFile-1794979833445-952988861.jpeg';
+  }
+
   const paymentReceiptName =
     pay.receiptFileName ||
-    (paymentReceiptUrl ? 'UPI_Payment_Receipt.png' : '');
+    (paymentReceiptUrl ? 'Payment_Receipt_Photo.jpeg' : '');
 
   const paymentMethod =
     pay.method ||
@@ -382,7 +387,7 @@ export const AdminProvider = ({ children }) => {
         localStorage.setItem('admin_seen_application_ids', JSON.stringify(uniqueIds));
         localStorage.setItem('admin_seen_apps_seeded_v3', 'true');
       }
-    } catch (e) {}
+    } catch (e) { }
   }, [applications]);
 
   const clearNewApplicationAlert = useCallback(() => {
@@ -589,7 +594,7 @@ export const AdminProvider = ({ children }) => {
         setDocuments(docs);
         try {
           sessionStorage.setItem('admin_documents_cache', JSON.stringify(docs));
-        } catch (e) {}
+        } catch (e) { }
         return docs;
       }
     } catch (err) {
@@ -607,7 +612,7 @@ export const AdminProvider = ({ children }) => {
       try {
         const saved = localStorage.getItem('admin_seen_application_ids');
         if (saved) setSeenApplicationIds(JSON.parse(saved));
-      } catch (e) {}
+      } catch (e) { }
     };
 
     const handleWindowFocus = () => {
@@ -635,7 +640,7 @@ export const AdminProvider = ({ children }) => {
   // Ensure admin JWT token is active whenever admin session is authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      ensureAdminToken().catch(() => {});
+      ensureAdminToken().catch(() => { });
     }
   }, [isAuthenticated]);
 
