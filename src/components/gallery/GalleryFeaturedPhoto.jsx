@@ -4,10 +4,10 @@ import { GalleryLightbox } from './GalleryLightbox';
 import mdPhoto from '../../assets/image copy 9.png';
 import sureshPhoto from '../../assets/WhatsApp Image 2026-09-19 at 12.41.27.jpeg';
 import hemantaPhoto from '../../assets/WhatsApp Image 2026-09-19 at 13.58.06.jpeg';
-import ajitPhoto from '../../assets/WhatsApp Image 2026-09-19 at 13.55.28.jpeg';
+import ajitPhoto from '../../assets/ajit_kumar_bhuyan.jpg';
 import antarjamiPhoto from '../../assets/image copy 25.png';
-import govindaPhoto from '../../assets/image copy 19.png';
-import mornalPhoto from '../../assets/image copy 26.png';
+import govindaPhoto from '../../assets/gobinda_chandra_behera.jpg';
+import mornalPhoto from '../../assets/mrunal_kumar_mohapatra.jpg';
 
 export function GalleryFeaturedPhoto() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -41,8 +41,8 @@ export function GalleryFeaturedPhoto() {
     {
       id: 4,
       image: ajitPhoto,
-      name: "Ajit Bhuria",
-      modalTitle: "Ajit Bhuria",
+      name: "Ajit Kumar Bhuyan",
+      modalTitle: "Ajit Kumar Bhuyan",
       modalCaption: "Share Holder • New Utkal Finance Limited",
       category: "Leadership",
     },
@@ -57,16 +57,16 @@ export function GalleryFeaturedPhoto() {
     {
       id: 6,
       image: govindaPhoto,
-      name: "Govinda Behera",
-      modalTitle: "Govinda Behera",
+      name: "Gobinda Chandra Behera",
+      modalTitle: "Gobinda Chandra Behera",
       modalCaption: "Board Member • New Utkal Finance Limited",
       category: "Leadership",
     },
     {
       id: 7,
       image: mornalPhoto,
-      name: "Mornal Kumar Mohapatra",
-      modalTitle: "Mornal Kumar Mohapatra",
+      name: "Mrunal Kumar Mohapatra",
+      modalTitle: "Mrunal Kumar Mohapatra",
       modalCaption: "Board Member • New Utkal Finance Limited",
       category: "Leadership",
     },
